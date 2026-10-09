@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Мой Mini App</title>
+    <!-- 1. Подключаем Telegram Web App SDK -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--tg-theme-bg-color);
+            color: var(--tg-theme-text-color);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+        h1 { color: var(--tg-theme-text-color); }
+        button {
+            font-size: 18px;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 12px;
+            background-color: var(--tg-theme-button-color);
+            color: var(--tg-theme-button-text-color);
+            cursor: pointer;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Привет из Mini App! 👋</h1>
+    <p>Твой Telegram ID: <span id="user-id"></span></p>
+    <button onclick="sendHello()">Отправить привет в чат</button>
+
+    <script>
+        // 2. Инициализируем Telegram WebApp
+        const tg = window.Telegram.WebApp;
+        tg.ready();
+        tg.expand(); // Разворачиваем на весь экран
+
+        // 3. Получаем данные о пользователе
+        const user = tg.initDataUnsafe?.user;
+        if (user) {
+            document.getElementById('user-id').innerText = user.id;
+        }
+
+        // 4. Функция отправки данных в бота
+        function sendHello() {
+            if (tg.sendData) {
+                // Отправляем JSON-строку
+                tg.sendData(JSON.stringify({
+                    action: "hello",
+                    userName: user?.first_name || "Гость",
+                    timestamp: new Date().toISOString()
+                }));
+                // Закрываем Mini App после отправки
+                tg.close();
+            }
+        }
+    </script>
+</body>
+</html>
