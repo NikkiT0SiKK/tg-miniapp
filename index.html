@@ -2,67 +2,1259 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Мой Mini App</title>
-    <!-- 1. Подключаем Telegram Web App SDK -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Игровой бот</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
+        /* =========================================================
+           ПЕРЕМЕННЫЕ И БАЗА
+           ========================================================= */
+        :root {
+            --bg-primary: var(--tg-theme-bg-color, #0f0f1e);
+            --bg-secondary: var(--tg-theme-secondary-bg-color, #1a1a2e);
+            --text-primary: var(--tg-theme-text-color, #ffffff);
+            --text-secondary: var(--tg-theme-hint-color, #8b8b9a);
+            --accent: var(--tg-theme-button-color, #667eea);
+            --accent-text: var(--tg-theme-button-text-color, #ffffff);
+            --link: var(--tg-theme-link-color, #7b8ce8);
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --card-border: rgba(255, 255, 255, 0.08);
+            --success: #22c55e;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --radius: 16px;
+            --radius-sm: 10px;
+            --nav-height: 64px;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            overscroll-behavior: none;
+        }
+
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--tg-theme-bg-color);
-            color: var(--tg-theme-text-color);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+                         'Segoe UI', Roboto, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            font-size: 15px;
+            line-height: 1.4;
+            user-select: none;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Анимированный фон с градиентом */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background:
+                radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.15) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+            animation: bgFloat 20s ease-in-out infinite;
+        }
+
+        @keyframes bgFloat {
+            0%, 100% { transform: scale(1) rotate(0deg); }
+            50%      { transform: scale(1.1) rotate(3deg); }
+        }
+
+        /* =========================================================
+           LAYOUT
+           ========================================================= */
+        #app {
+            position: relative;
+            z-index: 1;
+            height: 100vh;
+            height: 100dvh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .screen {
+            flex: 1;
+            overflow-y: auto;
+            overflow-x: hidden;
+            padding: calc(16px + var(--safe-top)) 16px calc(var(--nav-height) + 20px + var(--safe-bottom));
+            display: none;
+            scroll-behavior: smooth;
+        }
+
+        .screen.active {
+            display: block;
+            animation: screenEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes screenEnter {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =========================================================
+           HEADER
+           ========================================================= */
+        .page-header {
+            margin-bottom: 20px;
+            animation: fadeInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .page-title {
+            font-size: 28px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .page-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =========================================================
+           CARDS
+           ========================================================= */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 16px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+        }
+
+        .balance-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 24px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 8px 32px rgba(102, 126, 234, 0.3);
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.1s backwards;
+        }
+
+        .balance-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -30%;
+            width: 200px;
+            height: 200px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            animation: pulseGlow 4s ease-in-out infinite;
+        }
+
+        @keyframes pulseGlow {
+            0%, 100% { transform: scale(1); opacity: 0.5; }
+            50%      { transform: scale(1.2); opacity: 0.8; }
+        }
+
+        .balance-label {
+            color: rgba(255, 255, 255, 0.85);
+            font-size: 13px;
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .balance-value {
+            color: #fff;
+            font-size: 36px;
+            font-weight: 800;
+            letter-spacing: -1px;
+            margin-top: 4px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .balance-icon {
+            font-size: 24px;
+        }
+
+        .balance-hint {
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 12px;
+            margin-top: 8px;
+            position: relative;
+            z-index: 1;
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* =========================================================
+           GAME CARDS
+           ========================================================= */
+        .section-title {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+            margin: 20px 4px 12px;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.15s backwards;
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .game-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 16px;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1),
+                        background 0.2s;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        .game-card:nth-child(1) { animation-delay: 0.2s; }
+        .game-card:nth-child(2) { animation-delay: 0.25s; }
+        .game-card:nth-child(3) { animation-delay: 0.3s; }
+        .game-card:nth-child(4) { animation-delay: 0.35s; }
+        .game-card:nth-child(5) { animation-delay: 0.4s; }
+        .game-card:nth-child(6) { animation-delay: 0.45s; }
+
+        .game-card:active {
+            transform: scale(0.96);
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .game-card::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: var(--gradient);
+            opacity: 0.12;
+            pointer-events: none;
+        }
+
+        .game-emoji {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: block;
+            filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.3));
+        }
+
+        .game-name {
+            font-weight: 600;
+            font-size: 14px;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+        }
+
+        .game-desc {
+            font-size: 11px;
+            color: var(--text-secondary);
+            line-height: 1.3;
+        }
+
+        .game-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(34, 197, 94, 0.2);
+            color: #22c55e;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+        }
+
+        /* =========================================================
+           PROFILE
+           ========================================================= */
+        .profile-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 24px;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: 700;
+            color: #fff;
+            box-shadow: 0 8px 24px rgba(102, 126, 234, 0.4);
+            flex-shrink: 0;
+        }
+
+        .profile-info h2 {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 2px;
+        }
+
+        .profile-info p {
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .stat-box {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            padding: 12px 8px;
+            text-align: center;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        .stat-box:nth-child(1) { animation-delay: 0.1s; }
+        .stat-box:nth-child(2) { animation-delay: 0.15s; }
+        .stat-box:nth-child(3) { animation-delay: 0.2s; }
+
+        .stat-value {
+            font-size: 20px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-top: 2px;
+        }
+
+        .chart-container {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 20px;
+            height: 220px;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) 0.25s backwards;
+        }
+
+        .game-stats-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .game-stat {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            padding: 12px 14px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        .game-stat-emoji { font-size: 24px; }
+
+        .game-stat-info { flex: 1; }
+        .game-stat-title { font-weight: 600; font-size: 14px; }
+        .game-stat-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+        .game-stat-wr {
+            font-weight: 700;
+            font-size: 16px;
+            background: linear-gradient(135deg, #22c55e, #16a34a);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* =========================================================
+           TOPS
+           ========================================================= */
+        .tabs {
+            display: flex;
+            gap: 6px;
+            overflow-x: auto;
+            margin-bottom: 16px;
+            padding-bottom: 4px;
+            scrollbar-width: none;
+            animation: fadeInUp 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            flex-shrink: 0;
+            padding: 8px 16px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab.active {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: #fff;
+            border-color: transparent;
+            box-shadow: 0 4px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .leaderboard {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .leader-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 14px;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        .leader-rank {
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 14px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.06);
+            flex-shrink: 0;
+        }
+
+        .leader-rank.top1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; }
+        .leader-rank.top2 { background: linear-gradient(135deg, #e5e7eb, #9ca3af); color: #fff; }
+        .leader-rank.top3 { background: linear-gradient(135deg, #d97706, #92400e); color: #fff; }
+
+        .leader-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 600;
+            font-size: 15px;
+            flex-shrink: 0;
+        }
+
+        .leader-info { flex: 1; min-width: 0; }
+        .leader-name {
+            font-weight: 600;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .leader-meta { font-size: 11px; color: var(--text-secondary); }
+
+        .leader-value {
+            font-weight: 700;
+            font-size: 15px;
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* =========================================================
+           ACHIEVEMENTS
+           ========================================================= */
+        .ach-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .ach-card {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: var(--radius-sm);
+            padding: 14px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            position: relative;
+            overflow: hidden;
+            animation: fadeInUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+
+        .ach-card.locked {
+            opacity: 0.4;
+            filter: grayscale(0.8);
+        }
+
+        .ach-card.unlocked::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(102, 126, 234, 0.3), transparent 70%);
+            animation: pulseGlow 3s ease-in-out infinite;
+        }
+
+        .ach-emoji { font-size: 28px; }
+        .ach-title { font-weight: 600; font-size: 13px; }
+        .ach-desc { font-size: 11px; color: var(--text-secondary); line-height: 1.3; }
+
+        /* =========================================================
+           BOTTOM NAV
+           ========================================================= */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: calc(var(--nav-height) + var(--safe-bottom));
+            padding-bottom: var(--safe-bottom);
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: var(--bg-secondary);
+            border-top: 1px solid var(--card-border);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            z-index: 100;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .nav-item {
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            height: 100vh;
-            margin: 0;
-            padding: 20px;
-            box-sizing: border-box;
-        }
-        h1 { color: var(--tg-theme-text-color); }
-        button {
-            font-size: 18px;
-            padding: 15px 30px;
-            border: none;
-            border-radius: 12px;
-            background-color: var(--tg-theme-button-color);
-            color: var(--tg-theme-button-text-color);
+            gap: 3px;
             cursor: pointer;
-            margin-top: 20px;
+            position: relative;
+            color: var(--text-secondary);
+            transition: color 0.2s;
         }
+
+        .nav-item.active {
+            color: var(--accent);
+        }
+
+        .nav-emoji {
+            font-size: 20px;
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .nav-item.active .nav-emoji {
+            transform: translateY(-2px) scale(1.15);
+        }
+
+        .nav-label {
+            font-size: 10px;
+            font-weight: 600;
+            letter-spacing: 0.2px;
+        }
+
+        .nav-item.active::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 24px;
+            height: 3px;
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            border-radius: 0 0 4px 4px;
+            animation: navIndicator 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        @keyframes navIndicator {
+            from { width: 0; opacity: 0; }
+            to   { width: 24px; opacity: 1; }
+        }
+
+        /* =========================================================
+           TOAST
+           ========================================================= */
+        .toast {
+            position: fixed;
+            top: calc(20px + var(--safe-top));
+            left: 50%;
+            transform: translateX(-50%) translateY(-120%);
+            background: rgba(30, 30, 46, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #fff;
+            padding: 12px 20px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            z-index: 1000;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            max-width: 90vw;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
+
+        /* =========================================================
+           SKELETON
+           ========================================================= */
+        .skeleton {
+            background: linear-gradient(
+                90deg,
+                rgba(255, 255, 255, 0.03) 25%,
+                rgba(255, 255, 255, 0.08) 50%,
+                rgba(255, 255, 255, 0.03) 75%
+            );
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite;
+            border-radius: 8px;
+        }
+
+        @keyframes shimmer {
+            0%   { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+
+        .loading {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 20px 0;
+        }
+
+        /* =========================================================
+           HERO
+           ========================================================= */
+        .hero {
+            text-align: center;
+            padding: 20px 0 30px;
+            animation: fadeInUp 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .hero-emoji {
+            font-size: 56px;
+            display: block;
+            margin-bottom: 12px;
+            animation: bounceIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.2s backwards;
+        }
+
+        @keyframes bounceIn {
+            from { opacity: 0; transform: scale(0.3); }
+            60%  { transform: scale(1.1); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+
+        .hero-title {
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            background: linear-gradient(135deg, #667eea, #a855f7);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-subtitle {
+            color: var(--text-secondary);
+            font-size: 14px;
+            margin-top: 6px;
+        }
+
+        /* Утилита */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
-    <h1>Привет из Mini App! 👋</h1>
-    <p>Твой Telegram ID: <span id="user-id"></span></p>
-    <button onclick="sendHello()">Отправить привет в чат</button>
+    <div id="app">
+
+        <!-- ============================================================
+             ЭКРАН: ГЛАВНАЯ
+             ============================================================ -->
+        <section class="screen active" id="screen-home">
+            <div class="hero">
+                <span class="hero-emoji">🎮</span>
+                <h1 class="hero-title" id="hero-greeting">Привет!</h1>
+                <p class="hero-subtitle">Твой игровой арсенал</p>
+            </div>
+
+            <div class="balance-card">
+                <div class="balance-label">Банкролл</div>
+                <div class="balance-value">
+                    <span class="balance-icon">💰</span>
+                    <span id="balance-amount">—</span>
+                </div>
+                <div class="balance-hint">Используется для покера и турниров</div>
+            </div>
+
+            <div class="section-title">🎲 Игры</div>
+            <div class="games-grid">
+                <div class="game-card" style="--gradient: linear-gradient(135deg, #667eea, #764ba2)" data-game="poker">
+                    <span class="game-emoji">♠️</span>
+                    <div class="game-name">Покер</div>
+                    <div class="game-desc">Техасский холдем 2-6 игроков</div>
+                </div>
+                <div class="game-card" style="--gradient: linear-gradient(135deg, #f59e0b, #ef4444)" data-game="durak">
+                    <span class="game-emoji">🃏</span>
+                    <div class="game-name">Дурак</div>
+                    <div class="game-desc">Подкидной на 2-4 игрока</div>
+                </div>
+                <div class="game-card" style="--gradient: linear-gradient(135deg, #22c55e, #16a34a)" data-game="guess">
+                    <span class="game-emoji">🎯</span>
+                    <div class="game-name">Угадай число</div>
+                    <div class="game-desc">1 до 100 с подсказками</div>
+                </div>
+                <div class="game-card" style="--gradient: linear-gradient(135deg, #06b6d4, #0891b2)" data-game="ttt">
+                    <span class="game-emoji">❌</span>
+                    <div class="game-name">Крестики-нолики</div>
+                    <div class="game-desc">Против минимакса</div>
+                </div>
+                <div class="game-card" style="--gradient: linear-gradient(135deg, #a855f7, #7c3aed)" data-game="hangman">
+                    <span class="game-emoji">💀</span>
+                    <div class="game-name">Виселица</div>
+                    <div class="game-desc">4 категории слов</div>
+                </div>
+                <div class="game-card" style="--gradient: linear-gradient(135deg, #eab308, #f59e0b)" data-game="tournament">
+                    <span class="game-badge">NEW</span>
+                    <span class="game-emoji">🏆</span>
+                    <div class="game-name">Sit&Go</div>
+                    <div class="game-desc">Турнир с растущими блайндами</div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             ЭКРАН: ТОПЫ
+             ============================================================ -->
+        <section class="screen" id="screen-tops">
+            <div class="page-header">
+                <h1 class="page-title">🏆 Топы</h1>
+                <p class="page-subtitle">Лучшие игроки</p>
+            </div>
+
+            <div class="tabs" id="tops-tabs">
+                <div class="tab active" data-tab="poker">♠️ Покер</div>
+                <div class="tab" data-tab="durak">🃏 Дурак</div>
+                <div class="tab" data-tab="guess">🎯 Угадай</div>
+                <div class="tab" data-tab="ttt">❌ Крестики</div>
+                <div class="tab" data-tab="hangman">💀 Виселица</div>
+                <div class="tab" data-tab="bankroll">💰 Банкролл</div>
+            </div>
+
+            <div class="leaderboard" id="leaderboard">
+                <div class="loading">
+                    <div class="skeleton" style="height: 60px"></div>
+                    <div class="skeleton" style="height: 60px"></div>
+                    <div class="skeleton" style="height: 60px"></div>
+                    <div class="skeleton" style="height: 60px"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             ЭКРАН: ПРОФИЛЬ
+             ============================================================ -->
+        <section class="screen" id="screen-profile">
+            <div class="page-header">
+                <h1 class="page-title">📊 Профиль</h1>
+            </div>
+
+            <div class="profile-header">
+                <div class="avatar" id="profile-avatar">?</div>
+                <div class="profile-info">
+                    <h2 id="profile-name">Загрузка...</h2>
+                    <p id="profile-username">@—</p>
+                </div>
+            </div>
+
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-games">—</div>
+                    <div class="stat-label">Игр</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-wins">—</div>
+                    <div class="stat-label">Побед</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="stat-winrate">—</div>
+                    <div class="stat-label">Winrate</div>
+                </div>
+            </div>
+
+            <div class="section-title">💰 Динамика банкролла</div>
+            <div class="chart-container">
+                <canvas id="bankrollChart"></canvas>
+            </div>
+
+            <div class="section-title">🎮 По играм</div>
+            <div class="game-stats-list" id="game-stats">
+                <div class="loading">
+                    <div class="skeleton" style="height: 60px"></div>
+                    <div class="skeleton" style="height: 60px"></div>
+                    <div class="skeleton" style="height: 60px"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             ЭКРАН: ДОСТИЖЕНИЯ
+             ============================================================ -->
+        <section class="screen" id="screen-achievements">
+            <div class="page-header">
+                <h1 class="page-title">🎖 Достижения</h1>
+                <p class="page-subtitle" id="ach-counter">Загрузка...</p>
+            </div>
+
+            <div class="ach-grid" id="ach-grid">
+                <div class="loading" style="grid-column: 1 / -1">
+                    <div class="skeleton" style="height: 80px"></div>
+                    <div class="skeleton" style="height: 80px"></div>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============================================================
+             BOTTOM NAVIGATION
+             ============================================================ -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-screen="home">
+                <span class="nav-emoji">🏠</span>
+                <span class="nav-label">Главная</span>
+            </div>
+            <div class="nav-item" data-screen="tops">
+                <span class="nav-emoji">🏆</span>
+                <span class="nav-label">Топы</span>
+            </div>
+            <div class="nav-item" data-screen="profile">
+                <span class="nav-emoji">📊</span>
+                <span class="nav-label">Профиль</span>
+            </div>
+            <div class="nav-item" data-screen="achievements">
+                <span class="nav-emoji">🎖</span>
+                <span class="nav-label">Награды</span>
+            </div>
+        </nav>
+
+    </div>
+
+    <!-- TOAST контейнер -->
+    <div class="toast" id="toast"></div>
 
     <script>
-        // 2. Инициализируем Telegram WebApp
-        const tg = window.Telegram.WebApp;
-        tg.ready();
-        tg.expand(); // Разворачиваем на весь экран
+        /* =========================================================
+           TELEGRAM SDK
+           ========================================================= */
+        const tg = window.Telegram?.WebApp;
 
-        // 3. Получаем данные о пользователе
-        const user = tg.initDataUnsafe?.user;
-        if (user) {
-            document.getElementById('user-id').innerText = user.id;
-        }
+        function initTelegram() {
+            if (!tg) return;
+            tg.ready();
+            tg.expand();
+            tg.setHeaderColor?.('secondary_bg_color');
+            tg.setBackgroundColor?.('bg_color');
+            tg.enableClosingConfirmation?.();
 
-        // 4. Функция отправки данных в бота
-        function sendHello() {
-            if (tg.sendData) {
-                // Отправляем JSON-строку
-                tg.sendData(JSON.stringify({
-                    action: "hello",
-                    userName: user?.first_name || "Гость",
-                    timestamp: new Date().toISOString()
-                }));
-                // Закрываем Mini App после отправки
-                tg.close();
+            // Приветствие по имени
+            const user = tg.initDataUnsafe?.user;
+            if (user) {
+                const name = user.first_name || 'друг';
+                document.getElementById('hero-greeting').textContent =
+                    `Привет, ${name}! 👋`;
+                document.getElementById('profile-name').textContent =
+                    `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Игрок';
+                document.getElementById('profile-username').textContent =
+                    user.username ? `@${user.username}` : `id${user.id}`;
+                document.getElementById('profile-avatar').textContent =
+                    (user.first_name?.[0] || '?').toUpperCase();
             }
         }
+
+        /* Haptic feedback */
+        function haptic(type = 'light') {
+            try {
+                tg?.HapticFeedback?.impactOccurred(type);
+            } catch (e) {}
+        }
+
+        /* Toast */
+        let toastTimer;
+        function showToast(text, duration = 2000) {
+            const el = document.getElementById('toast');
+            el.textContent = text;
+            el.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => el.classList.remove('show'), duration);
+        }
+
+        /* Отправка данных в бота */
+        function sendToBot(payload) {
+            try {
+                tg?.sendData(JSON.stringify(payload));
+                haptic('medium');
+                // Закрываем только если это терминальное действие
+                if (payload.close !== false) {
+                    setTimeout(() => tg?.close(), 200);
+                }
+            } catch (e) {
+                showToast('⚠️ Ошибка отправки');
+                console.error(e);
+            }
+        }
+
+        /* =========================================================
+           РОУТИНГ
+           ========================================================= */
+        const screens = {
+            home:         document.getElementById('screen-home'),
+            tops:         document.getElementById('screen-tops'),
+            profile:      document.getElementById('screen-profile'),
+            achievements: document.getElementById('screen-achievements'),
+        };
+
+        function switchScreen(name) {
+            Object.entries(screens).forEach(([key, el]) => {
+                el.classList.toggle('active', key === name);
+            });
+            document.querySelectorAll('.nav-item').forEach(n => {
+                n.classList.toggle('active', n.dataset.screen === name);
+            });
+            haptic('light');
+
+            // Загружаем данные нужного экрана
+            if (name === 'tops') loadTops();
+            if (name === 'profile') loadProfile();
+            if (name === 'achievements') loadAchievements();
+        }
+
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => switchScreen(item.dataset.screen));
+        });
+
+        /* =========================================================
+           МОК-ДАННЫЕ (заменим на реальные через бота)
+           ========================================================= */
+        const MOCK = {
+            balance: 2450,
+            stats: {
+                total_games: 47,
+                total_wins: 28,
+                winrate: 59.5,
+                games: [
+                    { game: 'poker',   emoji: '♠️', title: 'Покер',       played: 12, wins: 7 },
+                    { game: 'durak',   emoji: '🃏', title: 'Дурак',       played: 8,  wins: 5 },
+                    { game: 'guess',   emoji: '🎯', title: 'Угадай число', played: 15, wins: 11 },
+                    { game: 'ttt',     emoji: '❌', title: 'Крестики',     played: 7,  wins: 3 },
+                    { game: 'hangman', emoji: '💀', title: 'Виселица',     played: 5,  wins: 2 },
+                ],
+            },
+            bankroll_history: [1000, 1100, 950, 1300, 1200, 1700, 1650, 2100, 2450],
+            tops: {
+                poker: [
+                    { name: 'Alex',   value: 1523, meta: '27 побед' },
+                    { name: 'Nikita', value: 892,  meta: '18 побед' },
+                    { name: 'Masha',  value: 654,  meta: '12 побед' },
+                ],
+                bankroll: [
+                    { name: 'Alex',   value: 12840, meta: 'Игрок' },
+                    { name: 'Masha',  value: 8340,  meta: 'Игрок' },
+                    { name: 'Nikita', value: 2450,  meta: 'Игрок' },
+                ],
+            },
+            achievements: {
+                unlocked: ['first_win', 'win_10', 'guess_sniper', 'poker_first', 'ttt_win'],
+                all: [
+                    { id: 'first_win',    emoji: '🎉', title: 'Первая победа', desc: 'Выиграй первую игру' },
+                    { id: 'win_10',       emoji: '🏅', title: 'Ветеран',       desc: '10 побед' },
+                    { id: 'win_50',       emoji: '🏆', title: 'Чемпион',       desc: '50 побед' },
+                    { id: 'win_200',      emoji: '👑', title: 'Легенда',       desc: '200 побед' },
+                    { id: 'streak_5',     emoji: '🔥', title: 'В ударе',       desc: '5 побед подряд' },
+                    { id: 'streak_10',    emoji: '⚡', title: 'Несокрушимый',  desc: '10 побед подряд' },
+                    { id: 'guess_sniper', emoji: '🎯', title: 'Снайпер',       desc: 'Угадай с 1 попытки' },
+                    { id: 'guess_sharp',  emoji: '🎯', title: 'Меткий',        desc: 'Угадай за ≤5 попыток' },
+                    { id: 'ttt_win',      emoji: '❌', title: 'Победитель',    desc: 'Обыграй бота в крестики' },
+                    { id: 'hangman_win',  emoji: '💀', title: 'Спаситель',     desc: 'Выиграй в виселицу' },
+                    { id: 'poker_first',  emoji: '♠️', title: 'Первая раздача',desc: 'Сыграй партию в покер' },
+                    { id: 'poker_win',    emoji: '♣️', title: 'Покерист',      desc: 'Выиграй раздачу' },
+                    { id: 'durak_first',  emoji: '🃏', title: 'Первая партия', desc: 'Сыграй в дурака' },
+                    { id: 'durak_win',    emoji: '👑', title: 'Вышел из дураков', desc: 'Выиграй в дурака' },
+                    { id: 'millionaire',  emoji: '💰', title: 'Миллионер',     desc: 'Банкролл 10 000 фишек' },
+                    { id: 'play_all',     emoji: '🎮', title: 'Универсал',     desc: 'Сыграй во все 5 игр' },
+                ],
+            },
+        };
+
+        /* =========================================================
+           РЕНДЕР: ГЛАВНАЯ
+           ========================================================= */
+        function renderBalance() {
+            const el = document.getElementById('balance-amount');
+            const target = MOCK.balance;
+            let current = 0;
+            const step = Math.ceil(target / 20);
+            const timer = setInterval(() => {
+                current = Math.min(current + step, target);
+                el.textContent = current.toLocaleString('ru-RU');
+                if (current >= target) clearInterval(timer);
+            }, 30);
+        }
+
+        /* =========================================================
+           РЕНДЕР: ТОПЫ
+           ========================================================= */
+        function renderLeaderboard(tab) {
+            const container = document.getElementById('leaderboard');
+            const data = MOCK.tops[tab] || MOCK.tops.poker;
+
+            container.innerHTML = data.map((item, i) => {
+                const rankClass = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
+                const initial = (item.name[0] || '?').toUpperCase();
+                return `
+                    <div class="leader-item" style="animation-delay: ${i * 0.05}s">
+                        <div class="leader-rank ${rankClass}">${i + 1}</div>
+                        <div class="leader-avatar">${initial}</div>
+                        <div class="leader-info">
+                            <div class="leader-name">${item.name}</div>
+                            <div class="leader-meta">${item.meta || ''}</div>
+                        </div>
+                        <div class="leader-value">${item.value.toLocaleString('ru-RU')}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function loadTops(tab = 'poker') {
+            // В будущем: sendToBot({ action: 'get_tops', tab }) и ждать ответа
+            // Пока мок:
+            setTimeout(() => renderLeaderboard(tab), 200);
+        }
+
+        document.querySelectorAll('#tops-tabs .tab').forEach(tab => {
+            tab.addEventListener('click', () => {
+                document.querySelectorAll('#tops-tabs .tab').forEach(t => t.classList.remove('active'));
+                tab.classList.add('active');
+                haptic('light');
+                const t = tab.dataset.tab;
+                document.getElementById('leaderboard').innerHTML = `
+                    <div class="loading">
+                        <div class="skeleton" style="height: 60px"></div>
+                        <div class="skeleton" style="height: 60px"></div>
+                    </div>
+                `;
+                loadTops(t);
+            });
+        });
+
+        /* =========================================================
+           РЕНДЕР: ПРОФИЛЬ
+           ========================================================= */
+        function renderProfile() {
+            const s = MOCK.stats;
+            document.getElementById('stat-games').textContent = s.total_games;
+            document.getElementById('stat-wins').textContent = s.total_wins;
+            document.getElementById('stat-winrate').textContent = s.winrate.toFixed(0) + '%';
+
+            const list = document.getElementById('game-stats');
+            list.innerHTML = s.games.map((g, i) => {
+                const wr = g.played ? (g.wins / g.played * 100).toFixed(0) : 0;
+                return `
+                    <div class="game-stat" style="animation-delay: ${0.05 * i}s">
+                        <div class="game-stat-emoji">${g.emoji}</div>
+                        <div class="game-stat-info">
+                            <div class="game-stat-title">${g.title}</div>
+                            <div class="game-stat-meta">${g.played} игр · ${g.wins} побед</div>
+                        </div>
+                        <div class="game-stat-wr">${wr}%</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        let chartInstance = null;
+        function renderChart() {
+            const ctx = document.getElementById('bankrollChart');
+            if (!ctx) return;
+
+            if (chartInstance) chartInstance.destroy();
+
+            const data = MOCK.bankroll_history;
+            const gradient = ctx.getContext('2d').createLinearGradient(0, 0, 0, 220);
+            gradient.addColorStop(0, 'rgba(102, 126, 234, 0.5)');
+            gradient.addColorStop(1, 'rgba(102, 126, 234, 0)');
+
+            chartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map((_, i) => `#${i + 1}`),
+                    datasets: [{
+                        data,
+                        borderColor: '#667eea',
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        pointRadius: 0,
+                        pointHoverRadius: 5,
+                        pointHoverBackgroundColor: '#a855f7',
+                        pointHoverBorderColor: '#fff',
+                        pointHoverBorderWidth: 2,
+                    }],
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(30, 30, 46, 0.95)',
+                            borderColor: 'rgba(102, 126, 234, 0.4)',
+                            borderWidth: 1,
+                            padding: 10,
+                            displayColors: false,
+                            callbacks: {
+                                label: (ctx) => '💰 ' + ctx.parsed.y.toLocaleString('ru-RU'),
+                            },
+                        },
+                    },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            display: true,
+                            grid: { color: 'rgba(255, 255, 255, 0.04)' },
+                            ticks: {
+                                color: '#8b8b9a',
+                                font: { size: 10 },
+                                callback: v => v >= 1000 ? (v / 1000) + 'k' : v,
+                            },
+                        },
+                    },
+                },
+            });
+        }
+
+        function loadProfile() {
+            // В будущем: sendToBot({ action: 'get_profile' })
+            setTimeout(() => {
+                renderProfile();
+                renderChart();
+            }, 200);
+        }
+
+        /* =========================================================
+           РЕНДЕР: ДОСТИЖЕНИЯ
+           ========================================================= */
+        function loadAchievements() {
+            // В будущем: sendToBot({ action: 'get_achievements' })
+            setTimeout(() => {
+                const { unlocked, all } = MOCK.achievements;
+                const unlockedSet = new Set(unlocked);
+                document.getElementById('ach-counter').textContent =
+                    `Открыто ${unlocked.length} из ${all.length}`;
+
+                document.getElementById('ach-grid').innerHTML = all.map((a, i) => {
+                    const isUnlocked = unlockedSet.has(a.id);
+                    return `
+                        <div class="ach-card ${isUnlocked ? 'unlocked' : 'locked'}"
+                             style="animation-delay: ${i * 0.03}s">
+                            <div class="ach-emoji">${a.emoji}</div>
+                            <div class="ach-title">${a.title}</div>
+                            <div class="ach-desc">${a.desc}</div>
+                        </div>
+                    `;
+                }).join('');
+            }, 200);
+        }
+
+        /* =========================================================
+           КЛИКИ ПО ИГРАМ
+           ========================================================= */
+        document.querySelectorAll('.game-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const game = card.dataset.game;
+                haptic('medium');
+
+                const labels = {
+                    poker: '♠️ Открываю Покер...',
+                    durak: '🃏 Открываю Дурака...',
+                    guess: '🎯 Открываю Угадай число...',
+                    ttt: '❌ Открываю Крестики-нолики...',
+                    hangman: '💀 Открываю Виселицу...',
+                    tournament: '🏆 Открываю Sit&Go...',
+                };
+                showToast(labels[game] || 'Открываю...');
+
+                // Отправляем боту команду
+                sendToBot({
+                    action: 'open_game',
+                    game,
+                    close: true,
+                });
+            });
+        });
+
+        /* =========================================================
+           ИНИЦИАЛИЗАЦИЯ
+           ========================================================= */
+        window.addEventListener('load', () => {
+            initTelegram();
+            renderBalance();
+            // Предзагружаем профиль, когда переключатся — уже готово
+            loadProfile();
+        });
     </script>
 </body>
 </html>
