@@ -1,7 +1,6 @@
 /* ============================================================
-   MULTIPLAYER TTT — Крестики PvP
+   MULTIPLAYER TTT
    ============================================================ */
-
 let mpTTT = {
     code: null,
     size: 3,
@@ -13,34 +12,36 @@ let mpTTT = {
 };
 
 function openMpTTT() {
-    mpTTT._finishedShown = false;
     showMpTTTLobby();
     go('mp-ttt');
     checkMpTTTRoom();
-    loadPublicRooms('ttt');
+    if (typeof loadPublicRooms === 'function') loadPublicRooms('ttt');
 }
 
 function showMpTTTLobby() {
-    document.getElementById('mp-ttt-lobby').classList.remove('hidden');
-    document.getElementById('mp-ttt-wait').classList.add('hidden');
-    document.getElementById('mp-ttt-game').classList.add('hidden');
-    document.getElementById('mp-ttt-sub').textContent = 'Игра с другом';
+    document.getElementById('mp-ttt-lobby')?.classList.remove('hidden');
+    document.getElementById('mp-ttt-wait')?.classList.add('hidden');
+    document.getElementById('mp-ttt-game')?.classList.add('hidden');
+    const sub = document.getElementById('mp-ttt-sub');
+    if (sub) sub.textContent = 'Игра с другом';
     document.getElementById('mp-ttt-join-block')?.classList.add('hidden');
 }
 
 function showMpTTTWait(code, inviteLink) {
-    document.getElementById('mp-ttt-lobby').classList.add('hidden');
-    document.getElementById('mp-ttt-wait').classList.remove('hidden');
-    document.getElementById('mp-ttt-game').classList.add('hidden');
-    document.getElementById('mp-ttt-wait-code').textContent = code;
+    document.getElementById('mp-ttt-lobby')?.classList.add('hidden');
+    document.getElementById('mp-ttt-wait')?.classList.remove('hidden');
+    document.getElementById('mp-ttt-game')?.classList.add('hidden');
+    const c = document.getElementById('mp-ttt-wait-code');
+    if (c) c.textContent = code;
     if (inviteLink) mpTTT.inviteLink = inviteLink;
 }
 
 function showMpTTTGame() {
-    document.getElementById('mp-ttt-lobby').classList.add('hidden');
-    document.getElementById('mp-ttt-wait').classList.add('hidden');
-    document.getElementById('mp-ttt-game').classList.remove('hidden');
-    document.getElementById('mp-ttt-sub').textContent = 'Игра';
+    document.getElementById('mp-ttt-lobby')?.classList.add('hidden');
+    document.getElementById('mp-ttt-wait')?.classList.add('hidden');
+    document.getElementById('mp-ttt-game')?.classList.remove('hidden');
+    const sub = document.getElementById('mp-ttt-sub');
+    if (sub) sub.textContent = 'Игра';
 }
 
 async function checkMpTTTRoom() {
@@ -49,7 +50,7 @@ async function checkMpTTTRoom() {
         const data = await api('/api/games/my_room');
         if (data.has_room && data.game === 'ttt') {
             mpTTT.code = data.code;
-            mpTTT.isHost = data.host_id === getUserId();
+            mpTTT.isHost = data.host_id === tg?.initDataUnsafe?.user?.id;
             if (data.started) {
                 showMpTTTGame();
                 refreshMpTTT();
@@ -76,15 +77,20 @@ function renderMpTTTPlayers(players, max, targetId) {
     </div>`;
 }
 
-/* ---- Создать ---- */
+/* ---- Создать комнату ---- */
 document.getElementById('mp-ttt-create')?.addEventListener('click', async () => {
     try {
-        const data = await apiPost('/api/games/create', {
-            game: 'ttt',
-            max_players: 2,
-            public: mpTTT.isPublic,
-            settings: { size: mpTTT.size },
+        const r = await fetch(API_URL + '/api/games/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Init-Data': INIT_DATA },
+            body: JSON.stringify({
+                game: 'ttt',
+                max_players: 2,
+                public: mpTTT.isPublic,
+                settings: { size: mpTTT.size },
+            }),
         });
+        const data = await r.json();
         if (!data.ok) { toast('❌ ' + (data.error || 'Ошибка')); return; }
         mpTTT.code = data.code;
         mpTTT.isHost = true;
@@ -92,13 +98,13 @@ document.getElementById('mp-ttt-create')?.addEventListener('click', async () => 
         showMpTTTWait(data.code, data.invite_link);
         renderMpTTTPlayers(data.players, data.max_players, 'mp-ttt-wait-players');
         if (typeof sfx === 'function') sfx('success');
-        haptic('medium');
+        if (typeof haptic === 'function') haptic('medium');
 
-        setTimeout(() => openShareModal({...data, game: 'ttt'}), 400);
+        setTimeout(() => openShareModal({ ...data, game: 'ttt' }), 400);
     } catch (e) { toast('❌ ' + e.message); }
 });
 
-/* ---- Share в wait ---- */
+/* ---- Пригласить ---- */
 document.getElementById('mp-ttt-share')?.addEventListener('click', () => {
     if (!mpTTT.inviteLink) return;
     openShareModal({
@@ -108,7 +114,7 @@ document.getElementById('mp-ttt-share')?.addEventListener('click', () => {
     });
 });
 
-/* ---- Public/Private ---- */
+/* ---- Приватная / Публичная ---- */
 document.querySelectorAll('[data-mppublic]').forEach(chip => {
     chip.addEventListener('click', () => {
         mpTTT.isPublic = chip.dataset.mppublic === 'public';
@@ -126,7 +132,7 @@ document.querySelectorAll('[data-mpsize]').forEach(chip => {
     });
 });
 
-/* ---- Quick share ---- */
+/* ---- Quick-share ---- */
 document.getElementById('mp-ttt-quick-share')?.addEventListener('click', () => {
     if (mpTTT.code && mpTTT.inviteLink) {
         openShareModal({
@@ -137,10 +143,10 @@ document.getElementById('mp-ttt-quick-share')?.addEventListener('click', () => {
         return;
     }
     mpTTT.size = 3;
-    document.getElementById('mp-ttt-create').click();
+    document.getElementById('mp-ttt-create')?.click();
 });
 
-/* ---- Quick code ---- */
+/* ---- Quick-code ---- */
 document.getElementById('mp-ttt-quick-code')?.addEventListener('click', () => {
     document.getElementById('mp-ttt-join-block')?.classList.toggle('hidden');
     document.getElementById('mp-ttt-join-code')?.focus();
@@ -153,10 +159,16 @@ document.getElementById('mp-ttt-join-code')?.addEventListener('keydown', e => {
 });
 
 async function joinMpTTT() {
-    const code = document.getElementById('mp-ttt-join-code').value.trim().toUpperCase();
+    const codeEl = document.getElementById('mp-ttt-join-code');
+    const code = codeEl?.value.trim().toUpperCase();
     if (!code) return;
     try {
-        const data = await apiPost('/api/games/join', { code });
+        const r = await fetch(API_URL + '/api/games/join', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Init-Data': INIT_DATA },
+            body: JSON.stringify({ code }),
+        });
+        const data = await r.json();
         if (!data.ok) { toast('❌ ' + (data.error || 'Ошибка')); return; }
         mpTTT.code = data.code;
         showMpTTTWait(data.code);
@@ -167,7 +179,12 @@ async function joinMpTTT() {
 
 /* ---- Leave ---- */
 async function leaveMpTTT() {
-    try { await apiPost('/api/games/leave', {}); } catch (e) {}
+    try {
+        await fetch(API_URL + '/api/games/leave', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Init-Data': INIT_DATA },
+        });
+    } catch (e) {}
     mpTTT.code = null;
     mpTTT.inviteLink = null;
     mpTTT._finishedShown = false;
@@ -179,7 +196,18 @@ document.getElementById('mp-ttt-leave-2')?.addEventListener('click', leaveMpTTT)
 
 /* ---- Refresh ---- */
 async function refreshMpTTT() {
-    if (!mpTTT.code) return;
+    if (!mpTTT.code) {
+        // Если code нет — попробуем получить
+        try {
+            const room = await api('/api/games/my_room');
+            if (room.has_room && room.game === 'ttt') {
+                mpTTT.code = room.code;
+                mpTTT.isHost = room.host_id === tg?.initDataUnsafe?.user?.id;
+            } else {
+                return;
+            }
+        } catch (e) { return; }
+    }
     try {
         const data = await api('/api/games/state', { code: mpTTT.code });
         if (!data.ok) return;
@@ -191,53 +219,70 @@ async function refreshMpTTT() {
         if (data.game !== 'ttt') return;
         mpTTT.state = data;
         renderMpTTTGame(data);
-    } catch (e) {}
+    } catch (e) {
+        console.warn('refreshMpTTT failed:', e);
+    }
 }
 
+/* ---- Отрисовка ---- */
 function renderMpTTTGame(s) {
     if (currentScreen !== 'mp-ttt') return;
     showMpTTTGame();
 
-    const myId = getUserId();
+    const myId = tg?.initDataUnsafe?.user?.id;
     const isMyTurn = s.to_act === myId;
 
+    // Панель игроков
     const bar = document.getElementById('mp-ttt-players-bar');
-    bar.innerHTML = (s.players_order || []).map((uid, idx) => {
-        const isMe = uid === myId;
-        const symbol = idx === 0 ? '❌' : '⭕';
-        const isActive = !s.finished && s.to_act === uid;
-        return `
-            <div class="mp-player ${isActive ? 'active' : ''}" data-uid="${uid}">
-                <div class="mp-player-symbol">${symbol}</div>
-                <div class="mp-player-name">${isMe ? 'Ты' : 'Соперник'}</div>
-                <div class="mp-player-badge">${isActive ? 'Ходит' : ''}</div>
-            </div>
-        `;
-    }).join('');
+    if (bar) {
+        const playersInfo = s.players_info || [];
+        bar.innerHTML = playersInfo.map((p) => {
+            const isActive = !s.finished && s.to_act === p.id;
+            return `
+                <div class="mp-player ${isActive ? 'active' : ''} ${p.is_you ? 'you' : ''}"
+                     data-uid="${p.id}">
+                    <div class="mp-player-symbol">${p.symbol === 'X' ? '❌' : '⭕'}</div>
+                    <div class="mp-player-name">${p.is_you ? 'Ты' : (p.name || 'Игрок')}</div>
+                    <div class="mp-player-badge">${isActive ? 'Ходит' : ''}</div>
+                </div>
+            `;
+        }).join('');
+    }
 
+    // Статус
     let status = '';
     if (s.finished) {
         if (s.winner === myId) {
             status = '🎉 Ты победил!';
-            if (!mpTTT._finishedShown) { mpTTT._finishedShown = true; sfx('win'); }
+            if (!mpTTT._finishedShown) {
+                mpTTT._finishedShown = true;
+                if (typeof sfx === 'function') sfx('win');
+            }
         } else if (s.winner === null) {
             status = '🤝 Ничья';
-            if (!mpTTT._finishedShown) { mpTTT._finishedShown = true; }
+            if (!mpTTT._finishedShown) mpTTT._finishedShown = true;
         } else {
             status = '😢 Ты проиграл';
-            if (!mpTTT._finishedShown) { mpTTT._finishedShown = true; sfx('lose'); }
+            if (!mpTTT._finishedShown) {
+                mpTTT._finishedShown = true;
+                if (typeof sfx === 'function') sfx('lose');
+            }
         }
     } else if (isMyTurn) {
         status = '🎯 Твой ход';
     } else {
         status = '⏳ Ход соперника';
     }
-    document.getElementById('mp-ttt-status').textContent = status;
+    const statusEl = document.getElementById('mp-ttt-status');
+    if (statusEl) statusEl.textContent = status;
 
+    // Поле
     const board = document.getElementById('mp-ttt-board');
-    board.style.gridTemplateColumns = `repeat(${s.size}, 1fr)`;
+    if (!board) return;
+    board.style.gridTemplateColumns = `repeat(${s.size || 3}, 1fr)`;
     board.innerHTML = '';
     const ICON = { 'X': '❌', 'O': '⭕', '': '' };
+
     (s.board || []).forEach((v, i) => {
         const cell = document.createElement('div');
         cell.className = 'ttt-cell';
@@ -250,24 +295,30 @@ function renderMpTTTGame(s) {
         board.appendChild(cell);
     });
 
+    // Подсказка
     const footer = document.getElementById('mp-ttt-footer-text');
-    if (s.finished) {
-        footer.textContent = 'Нажми «Покинуть» или создай новую игру';
-    } else if (isMyTurn) {
-        footer.textContent = '👆 Тапни по свободной клетке';
-    } else {
-        footer.textContent = 'Ждём хода соперника…';
+    if (footer) {
+        if (s.finished) footer.textContent = 'Нажми «Покинуть» или создай новую игру';
+        else if (isMyTurn) footer.textContent = '👆 Тапни по свободной клетке';
+        else footer.textContent = 'Ждём хода соперника…';
     }
 }
 
 async function moveMpTTT(idx) {
     if (!mpTTT.code) return;
     if (typeof sfx === 'function') sfx('click');
-    haptic('light');
+    if (typeof haptic === 'function') haptic('light');
     try {
-        const data = await apiPost('/api/games/action', {
-            code: mpTTT.code, action: 'move', idx,
+        const r = await fetch(API_URL + '/api/games/action', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-Init-Data': INIT_DATA },
+            body: JSON.stringify({
+                code: mpTTT.code,
+                action: 'move',
+                idx,
+            }),
         });
+        const data = await r.json();
         if (!data.ok) toast('❌ ' + (data.error || 'Ошибка'));
         setTimeout(refreshMpTTT, 150);
     } catch (e) {}
