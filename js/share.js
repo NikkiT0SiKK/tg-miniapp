@@ -61,15 +61,47 @@ function onPlayerJoined(data) {
 }
 
 /* ---------- WS: GAME STARTED ---------- */
-function onGameStarted(data) {
+async function onGameStarted(data) {
+    console.log('[GAME STARTED]', data);
+
     if (data.auto) {
         toast('🎮 Все в сборе — игра началась!', 2500);
         if (typeof sfx === 'function') sfx('success');
-        haptic('medium');
+        if (typeof haptic === 'function') haptic('medium');
     }
+
+    // ⚠️ ВАЖНО: сначала узнаём code СВОЕЙ комнаты
+    // (приглашённый игрок не создавал комнату — у него mpTTT.code = null)
+    try {
+        const myRoom = await api('/api/games/my_room');
+        if (myRoom.has_room) {
+            const code = myRoom.code;
+            const game = myRoom.game;
+
+            if (game === 'poker' && typeof pokerState !== 'undefined') {
+                pokerState.code = code;
+                pokerState.isHost = myRoom.host_id === tg?.initDataUnsafe?.user?.id;
+                if (typeof showPokerGame === 'function') showPokerGame();
+            }
+            if (game === 'durak' && typeof durakState !== 'undefined') {
+                durakState.code = code;
+                durakState.isHost = myRoom.host_id === tg?.initDataUnsafe?.user?.id;
+                if (typeof showDurakGame === 'function') showDurakGame();
+            }
+            if (game === 'ttt' && typeof mpTTT !== 'undefined') {
+                mpTTT.code = code;
+                mpTTT.isHost = myRoom.host_id === tg?.initDataUnsafe?.user?.id;
+                if (typeof showMpTTTGame === 'function') showMpTTTGame();
+            }
+        }
+    } catch (e) {
+        console.warn('my_room failed:', e);
+    }
+
+    // Навигация на игровой экран
     const routes = { poker: 'poker', durak: 'durak', ttt: 'mp-ttt' };
     const target = routes[data.game];
-    if (target && screens[target]) {
+    if (target && typeof screens !== 'undefined' && screens[target]) {
         setTimeout(() => {
             go(target);
             if (data.game === 'poker' && typeof refreshGameState === 'function') refreshGameState();
@@ -155,3 +187,38 @@ function initReactions(suffix) {
         });
     });
 }
+/* ============================================================
+   FALLBACK POLLING (когда WS не работает)
+   ============================================================ */
+let _pollingTimer = null;
+let _lastPollScreen = null;
+
+function startPolling() {
+    stopPolling();
+    _pollingTimer = setInterval(() => {
+        const cur = typeof currentScreen !== 'undefined' ? currentScreen : null;
+        if (cur === 'poker' && typeof refreshGameState === 'function') refreshGameState();
+        if (cur === 'durak' && typeof refreshDurakState === 'function') refreshDurakState();
+        if (cur === 'mp-ttt' && typeof refreshMpTTT === 'function') refreshMpTTT();
+    }, 1500);
+}
+
+function stopPolling() {
+    if (_pollingTimer) {
+        clearInterval(_pollingTimer);
+        _pollingTimer = null;
+    }
+}
+
+// Следим за сменой экрана: включаем/выключаем polling
+setInterval(() => {
+    if (typeof currentScreen === 'undefined') return;
+    const isGame = ['poker', 'durak', 'mp-ttt'].includes(currentScreen);
+    if (isGame && _lastPollScreen !== currentScreen) {
+        _lastPollScreen = currentScreen;
+        startPolling();
+    } else if (!isGame && _lastPollScreen !== null) {
+        _lastPollScreen = null;
+        stopPolling();
+    }
+}, 500);
