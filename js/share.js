@@ -1,8 +1,7 @@
 /* ============================================================
-   SHARE + REACTIONS + WS-события
+   SHARE + WS EVENTS
    ============================================================ */
 
-/* ---------- SHARE ---------- */
 let _shareData = null;
 
 function openShareModal(data) {
@@ -17,6 +16,7 @@ function closeShareModal() {
 }
 
 document.getElementById('share-close')?.addEventListener('click', closeShareModal);
+
 document.getElementById('share-modal')?.addEventListener('click', (e) => {
     if (e.target.id === 'share-modal') closeShareModal();
 });
@@ -34,20 +34,24 @@ document.getElementById('share-telegram')?.addEventListener('click', () => {
 document.getElementById('share-copy-link')?.addEventListener('click', () => {
     if (!_shareData) return;
     navigator.clipboard?.writeText(_shareData.invite_link);
-    toast('🔗 Ссылка скопирована');
+    if (typeof toast === 'function') toast('🔗 Ссылка скопирована');
     closeShareModal();
 });
 
 document.getElementById('share-copy-code')?.addEventListener('click', () => {
     if (!_shareData) return;
     navigator.clipboard?.writeText(_shareData.code);
-    toast('📋 Код скопирован');
+    if (typeof toast === 'function') toast('📋 Код скопирован');
 });
 
-/* ---------- WS: PLAYER JOINED ---------- */
-function onPlayerJoined(data) {
+
+/* ============================================================
+   WS: игрок присоединился
+   ============================================================ */
+async function onPlayerJoined(data) {
     if (typeof sfx === 'function') sfx('notification');
-    toast(`👤 ${data.player.name} присоединился`, 3000);
+    if (typeof toast === 'function')
+        toast(`👤 ${data.player.name} присоединился`, 3000);
 
     if (currentScreen === 'poker' && typeof renderWaitPlayers === 'function') {
         renderWaitPlayers(data.players, data.max_players);
@@ -60,18 +64,21 @@ function onPlayerJoined(data) {
     }
 }
 
-/* ---------- WS: GAME STARTED ---------- */
+
+/* ============================================================
+   WS: игра началась
+   ============================================================ */
 async function onGameStarted(data) {
     console.log('[GAME STARTED]', data);
 
     if (data.auto) {
-        toast('🎮 Все в сборе — игра началась!', 2500);
+        if (typeof toast === 'function')
+            toast('🎮 Все в сборе — игра началась!', 2500);
         if (typeof sfx === 'function') sfx('success');
         if (typeof haptic === 'function') haptic('medium');
     }
 
-    // ⚠️ ВАЖНО: сначала узнаём code СВОЕЙ комнаты
-    // (приглашённый игрок не создавал комнату — у него mpTTT.code = null)
+    // ВАЖНО: получаем code СВОЕЙ комнаты (приглашённый игрок = null)
     try {
         const myRoom = await api('/api/games/my_room');
         if (myRoom.has_room) {
@@ -98,7 +105,6 @@ async function onGameStarted(data) {
         console.warn('my_room failed:', e);
     }
 
-    // Навигация на игровой экран
     const routes = { poker: 'poker', durak: 'durak', ttt: 'mp-ttt' };
     const target = routes[data.game];
     if (target && typeof screens !== 'undefined' && screens[target]) {
@@ -111,12 +117,26 @@ async function onGameStarted(data) {
     }
 }
 
-/* ---------- REACTIONS ---------- */
+
+/* ============================================================
+   WS: достижения
+   ============================================================ */
+function onAchievementUnlocked(data) {
+    if (typeof sfx === 'function') sfx('notification');
+    data.achievements.forEach(a => {
+        if (typeof toast === 'function') toast(`${a.emoji} ${a.title}`, 4000);
+    });
+}
+
+
+/* ============================================================
+   РЕАКЦИИ
+   ============================================================ */
 function onReaction(data) {
     if (typeof sfx === 'function') sfx('notification');
     spawnFloatingReaction(data.emoji);
     showReactionBubble(data.from_id, data.emoji);
-    if (data.from_name) {
+    if (data.from_name && typeof toast === 'function') {
         toast(`${data.from_name}: ${data.emoji}`, 1500);
     }
 }
@@ -144,7 +164,6 @@ function showReactionBubble(fromId, emoji) {
         if (el) break;
     }
     if (!el) return;
-
     el.querySelectorAll('.reaction-bubble').forEach(b => b.remove());
     el.style.position = 'relative';
     const bubble = document.createElement('div');
@@ -154,7 +173,6 @@ function showReactionBubble(fromId, emoji) {
     setTimeout(() => bubble.remove(), 2500);
 }
 
-/* ---------- REACTIONS: панель ---------- */
 function initReactions(suffix) {
     const toggle = document.getElementById(`reactions-toggle${suffix}`);
     const list = document.getElementById(`reactions-list${suffix}`);
@@ -166,13 +184,6 @@ function initReactions(suffix) {
         if (typeof haptic === 'function') haptic('light');
     });
 
-    document.addEventListener('click', (e) => {
-        const panel = document.getElementById(`reactions-panel${suffix}`);
-        if (panel && !e.target.closest(`#reactions-panel${suffix}`)) {
-            list.classList.add('hidden');
-        }
-    });
-
     list.querySelectorAll('.reaction-btn').forEach(btn => {
         btn.addEventListener('click', async (e) => {
             e.stopPropagation();
@@ -181,12 +192,19 @@ function initReactions(suffix) {
             list.classList.add('hidden');
             try {
                 await apiPost('/api/games/reaction', { emoji });
-            } catch (err) {
-                console.warn('reaction failed:', err);
-            }
+            } catch (err) {}
         });
     });
 }
+
+// Инициализируем для всех игр
+document.addEventListener('DOMContentLoaded', () => {
+    initReactions('');
+    initReactions('-durak');
+    initReactions('-ttt');
+});
+
+
 /* ============================================================
    FALLBACK POLLING (когда WS не работает)
    ============================================================ */
@@ -210,7 +228,6 @@ function stopPolling() {
     }
 }
 
-// Следим за сменой экрана: включаем/выключаем polling
 setInterval(() => {
     if (typeof currentScreen === 'undefined') return;
     const isGame = ['poker', 'durak', 'mp-ttt'].includes(currentScreen);
