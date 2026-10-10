@@ -54,12 +54,38 @@ function updateBalanceDisplay(v) {
     if (el) el.textContent = Number(v).toLocaleString('ru-RU');
 }
 
+/* ============================================================
+   ПРОВЕРКА СТАРЫХ КОМНАТ
+   ============================================================ */
+async function cleanupStuckRoom() {
+    if (!API_URL) return;
+    try {
+        const data = await api('/api/games/my_room');
+        if (!data.has_room) return;
+
+        // Комната есть — проверим её состояние
+        const state = await api('/api/games/state', { code: data.code }).catch(() => null);
+
+        // Если стейт не грузится ИЛИ игра давно закончилась — выходим
+        if (!state || !state.ok || state.finished) {
+            console.log('[cleanup] Leaving stuck room:', data.code);
+            try {
+                await apiPost('/api/games/leave');
+                showToast?.('🚪 Вышел из старой комнаты');
+            } catch (e) {}
+        }
+    } catch (e) {
+        console.warn('cleanup failed:', e);
+    }
+}
+
 /* ---------- BOOT ---------- */
 window.addEventListener('load', () => {
     initTelegram();
     loadBalance();
     initWS();
 
+    setTimeout(cleanupStuckRoom, 2000);
     // Разбудить аудио при первом тапе
     const unlockAudio = () => {
         if (typeof initAudio === 'function') initAudio();
