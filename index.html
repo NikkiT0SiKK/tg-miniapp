@@ -4,727 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>Игровой бот</title>
+
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
-<style>
-/* ============================================================
-   ПЕРЕМЕННЫЕ
-   ============================================================ */
-:root {
-  --bg: var(--tg-theme-bg-color, #0f0f1e);
-  --bg2: var(--tg-theme-secondary-bg-color, #1a1a2e);
-  --text: var(--tg-theme-text-color, #ffffff);
-  --hint: var(--tg-theme-hint-color, #8b8b9a);
-  --accent: var(--tg-theme-button-color, #667eea);
-  --accent-text: var(--tg-theme-button-text-color, #ffffff);
-  --card: rgba(255,255,255,0.05);
-  --border: rgba(255,255,255,0.08);
-  --success: #22c55e;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --radius: 16px;
-  --r-sm: 10px;
-  --nav-h: 64px;
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
-}
 
-* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
-html, body { height:100%; overflow:hidden; overscroll-behavior:none; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  font-size: 15px;
-  line-height: 1.4;
-  user-select: none;
-  -webkit-font-smoothing: antialiased;
-}
-
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  background:
-    radial-gradient(circle at 20% 20%, rgba(102,126,234,0.15) 0%, transparent 50%),
-    radial-gradient(circle at 80% 80%, rgba(168,85,247,0.15) 0%, transparent 50%);
-  pointer-events: none;
-  z-index: 0;
-}
-
-#app {
-  position: relative;
-  z-index: 1;
-  height: 100vh;
-  height: 100dvh;
-  display: flex;
-  flex-direction: column;
-}
-
-.screen {
-  flex: 1;
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding: calc(16px + var(--safe-top)) 16px calc(var(--nav-h) + 20px + var(--safe-bottom));
-  display: none;
-}
-.screen.active { display: block; animation: screenIn .35s cubic-bezier(.16,1,.3,1); }
-@keyframes screenIn {
-  from { opacity:0; transform: translateY(20px); }
-  to { opacity:1; transform: translateY(0); }
-}
-
-/* ============================================================
-   HEADER
-   ============================================================ */
-.page-header {
-  margin-bottom: 20px;
-  animation: fadeInDown .4s cubic-bezier(.16,1,.3,1);
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.page-title {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #667eea, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.page-subtitle { color: var(--hint); font-size: 14px; margin-top: 4px; }
-.back-btn {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  background: var(--card);
-  border: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 20px;
-  cursor: pointer;
-  flex-shrink: 0;
-}
-.back-btn:active { transform: scale(.95); }
-
-@keyframes fadeInDown {
-  from { opacity:0; transform: translateY(-10px); }
-  to { opacity:1; transform: translateY(0); }
-}
-
-/* ============================================================
-   CARDS / BALANCE
-   ============================================================ */
-.balance-card {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  border-radius: 20px;
-  padding: 20px;
-  margin-bottom: 24px;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 8px 32px rgba(102,126,234,.3);
-  animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) .1s backwards;
-}
-.balance-card::before {
-  content:'';
-  position:absolute; top:-50%; right:-30%;
-  width:200px; height:200px;
-  background: rgba(255,255,255,.1);
-  border-radius:50%;
-  animation: pulse 4s ease-in-out infinite;
-}
-@keyframes pulse { 0%,100%{transform:scale(1);opacity:.5} 50%{transform:scale(1.2);opacity:.8} }
-.balance-label { color: rgba(255,255,255,.85); font-size: 13px; text-transform: uppercase; letter-spacing:.5px; font-weight: 500; }
-.balance-value { color:#fff; font-size: 34px; font-weight: 800; letter-spacing: -1px; margin-top:4px; display: flex; align-items: baseline; gap: 8px; }
-.balance-icon { font-size: 22px; }
-.balance-hint { color: rgba(255,255,255,.7); font-size: 12px; margin-top: 8px; position: relative; z-index:1; }
-
-@keyframes fadeInUp {
-  from { opacity:0; transform: translateY(20px); }
-  to { opacity:1; transform: translateY(0); }
-}
-
-/* ============================================================
-   SECTION TITLES
-   ============================================================ */
-.section-title {
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--hint);
-  text-transform: uppercase;
-  letter-spacing: .8px;
-  margin: 20px 4px 12px;
-  animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) .15s backwards;
-}
-
-/* ============================================================
-   GAMES GRID
-   ============================================================ */
-.games-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-}
-.game-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: transform .2s cubic-bezier(.16,1,.3,1);
-  animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) backwards;
-}
-.game-card:active { transform: scale(.96); background: rgba(255,255,255,.1); }
-.game-card::before {
-  content:''; position: absolute; inset: 0;
-  background: var(--grad);
-  opacity: .12;
-  pointer-events: none;
-}
-.game-emoji { font-size: 32px; margin-bottom: 8px; display: block; filter: drop-shadow(0 2px 8px rgba(0,0,0,.3)); }
-.game-name { font-weight: 600; font-size: 14px; margin-bottom: 2px; }
-.game-desc { font-size: 11px; color: var(--hint); line-height: 1.3; }
-.game-badge {
-  position: absolute; top: 10px; right: 10px;
-  background: rgba(34,197,94,.2); color: #22c55e;
-  font-size: 10px; font-weight: 700;
-  padding: 3px 8px; border-radius: 6px;
-  text-transform: uppercase;
-}
-.game-badge.net {
-  background: rgba(102,126,234,.25); color: #a5b4fc;
-}
-
-/* ============================================================
-   STATS ROW
-   ============================================================ */
-.stats-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 20px; }
-.stat-box {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 12px 8px;
-  text-align: center;
-  animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) backwards;
-}
-.stat-value {
-  font-size: 20px; font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.stat-label { font-size: 11px; color: var(--hint); text-transform: uppercase; letter-spacing: .5px; margin-top: 2px; }
-
-/* ============================================================
-   BOTTOM NAV
-   ============================================================ */
-.bottom-nav {
-  position: fixed;
-  bottom: 0; left: 0; right: 0;
-  height: calc(var(--nav-h) + var(--safe-bottom));
-  padding-bottom: var(--safe-bottom);
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  background: var(--bg2);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  z-index: 100;
-}
-.nav-item {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 3px;
-  cursor: pointer;
-  position: relative;
-  color: var(--hint);
-  transition: color .2s;
-}
-.nav-item.active { color: var(--accent); }
-.nav-emoji { font-size: 20px; transition: transform .3s cubic-bezier(.16,1,.3,1); }
-.nav-item.active .nav-emoji { transform: translateY(-2px) scale(1.15); }
-.nav-label { font-size: 10px; font-weight: 600; }
-.nav-item.active::after {
-  content:'';
-  position: absolute; top:0; left:50%; transform: translateX(-50%);
-  width: 24px; height: 3px;
-  background: linear-gradient(135deg, #667eea, #a855f7);
-  border-radius: 0 0 4px 4px;
-  animation: navIn .3s cubic-bezier(.16,1,.3,1);
-}
-@keyframes navIn { from { width:0; opacity:0; } to { width:24px; opacity:1; } }
-
-/* ============================================================
-   BUTTONS
-   ============================================================ */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 12px 20px;
-  background: var(--accent);
-  color: var(--accent-text);
-  border: none;
-  border-radius: var(--r-sm);
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform .15s, opacity .15s;
-  font-family: inherit;
-}
-.btn:active { transform: scale(.97); opacity: .9; }
-.btn.block { width: 100%; }
-.btn.sec {
-  background: var(--card);
-  color: var(--text);
-  border: 1px solid var(--border);
-}
-.btn.succ { background: var(--success); }
-.btn.dang { background: var(--danger); }
-.btn:disabled { opacity: .4; pointer-events: none; }
-
-/* ============================================================
-   GAME: GUESS
-   ============================================================ */
-.game-panel {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 20px;
-  margin-bottom: 16px;
-}
-.game-status {
-  text-align: center;
-  font-size: 18px;
-  font-weight: 700;
-  margin: 16px 0;
-  min-height: 28px;
-}
-.game-status.big { font-size: 24px; }
-.input-row {
-  display: flex;
-  gap: 8px;
-  margin-top: 12px;
-}
-.input-row input {
-  flex: 1;
-  padding: 14px 16px;
-  font-size: 18px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  color: var(--text);
-  font-family: inherit;
-  text-align: center;
-  font-weight: 700;
-}
-.input-row input:focus {
-  outline: none;
-  border-color: var(--accent);
-  background: rgba(102,126,234,.1);
-}
-.attempts-list {
-  max-height: 200px;
-  overflow-y: auto;
-  margin-top: 12px;
-}
-.attempt {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
-  background: rgba(255,255,255,.03);
-  margin-bottom: 4px;
-  font-size: 14px;
-  animation: slideIn .3s;
-}
-@keyframes slideIn { from { opacity:0; transform: translateX(-10px); } to { opacity:1; transform: translateX(0); } }
-.attempt .num { font-weight: 700; }
-.attempt .hint { font-size: 16px; }
-
-/* ============================================================
-   GAME: TIC-TAC-TOE
-   ============================================================ */
-.ttt-board {
-  display: grid;
-  gap: 6px;
-  margin: 20px auto;
-  max-width: 380px;
-}
-.ttt-cell {
-  aspect-ratio: 1;
-  background: rgba(255,255,255,.05);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  cursor: pointer;
-  transition: all .2s;
-  font-weight: 700;
-}
-.ttt-cell:active { transform: scale(.94); background: rgba(255,255,255,.1); }
-.ttt-cell.played { cursor: default; background: rgba(102,126,234,.15); }
-.ttt-cell.win-line { background: rgba(34,197,94,.3); animation: pulse 1s; }
-.ttt-cell.lose-line { background: rgba(239,68,68,.3); }
-.ttt-cell.disabled { cursor: default; }
-
-/* ============================================================
-   GAME: HANGMAN
-   ============================================================ */
-.hangman-figure {
-  text-align: center;
-  font-family: 'Courier New', monospace;
-  font-size: 14px;
-  white-space: pre;
-  line-height: 1.1;
-  background: rgba(0,0,0,.3);
-  border-radius: var(--r-sm);
-  padding: 16px;
-  margin-bottom: 16px;
-  min-height: 180px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.hangman-word {
-  text-align: center;
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 6px;
-  margin: 16px 0;
-  min-height: 40px;
-  text-transform: uppercase;
-}
-.hangman-lives {
-  text-align: center;
-  font-size: 20px;
-  margin-bottom: 16px;
-}
-.alphabet {
-  display: grid;
-  grid-template-columns: repeat(8, 1fr);
-  gap: 4px;
-  margin-top: 12px;
-}
-.letter-btn {
-  aspect-ratio: 1;
-  padding: 6px 0;
-  background: rgba(255,255,255,.06);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  text-transform: uppercase;
-  font-family: inherit;
-  transition: all .15s;
-}
-.letter-btn:active { transform: scale(.9); }
-.letter-btn.correct { background: rgba(34,197,94,.2); border-color: var(--success); color: #4ade80; }
-.letter-btn.wrong { background: rgba(239,68,68,.2); border-color: var(--danger); color: #f87171; }
-.letter-btn:disabled { cursor: default; opacity: .6; }
-.letter-btn.used { opacity: .3; pointer-events: none; }
-
-/* ============================================================
-   MULTIPLAYER CARD
-   ============================================================ */
-.multi-card {
-  background: linear-gradient(135deg, rgba(102,126,234,.15), rgba(168,85,247,.15));
-  border: 1px solid rgba(102,126,234,.3);
-  border-radius: var(--radius);
-  padding: 20px;
-  text-align: center;
-  margin-bottom: 16px;
-}
-.multi-card h3 { font-size: 18px; margin-bottom: 8px; }
-.multi-card p { color: var(--hint); font-size: 14px; margin-bottom: 16px; }
-
-/* ============================================================
-   ACHIEVEMENTS
-   ============================================================ */
-.ach-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-.ach-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 14px 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  position: relative;
-  overflow: hidden;
-  animation: fadeInUp .4s cubic-bezier(.16,1,.3,1) backwards;
-}
-.ach-card.locked { opacity: .4; filter: grayscale(.8); }
-.ach-card.unlocked::before {
-  content:'';
-  position: absolute; top:-50%; right:-50%;
-  width: 100%; height: 100%;
-  background: radial-gradient(circle, rgba(102,126,234,.3), transparent 70%);
-  animation: pulse 3s ease-in-out infinite;
-}
-.ach-emoji { font-size: 28px; }
-.ach-title { font-weight: 600; font-size: 13px; }
-.ach-desc { font-size: 11px; color: var(--hint); line-height: 1.3; }
-
-/* ============================================================
-   PROFILE
-   ============================================================ */
-.profile-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 24px;
-  animation: fadeInUp .5s cubic-bezier(.16,1,.3,1);
-}
-.avatar {
-  width: 72px; height: 72px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #a855f7);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 32px;
-  font-weight: 700;
-  color: #fff;
-  box-shadow: 0 8px 24px rgba(102,126,234,.4);
-  flex-shrink: 0;
-  overflow: hidden;
-}
-.avatar img { width: 100%; height: 100%; object-fit: cover; }
-.profile-info h2 { font-size: 22px; font-weight: 700; margin-bottom: 2px; }
-.profile-info p { color: var(--hint); font-size: 13px; }
-
-.game-stats-list { display: flex; flex-direction: column; gap: 8px; }
-.game-stat {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  padding: 12px 14px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  animation: fadeInUp .5s cubic-bezier(.16,1,.3,1) backwards;
-}
-.game-stat-emoji { font-size: 24px; }
-.game-stat-info { flex: 1; }
-.game-stat-title { font-weight: 600; font-size: 14px; }
-.game-stat-meta { font-size: 12px; color: var(--hint); margin-top: 2px; }
-.game-stat-wr {
-  font-weight: 700;
-  font-size: 16px;
-  background: linear-gradient(135deg, #22c55e, #16a34a);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================================
-   TOPS
-   ============================================================ */
-.tabs {
-  display: flex;
-  gap: 6px;
-  overflow-x: auto;
-  margin-bottom: 16px;
-  padding-bottom: 4px;
-  scrollbar-width: none;
-}
-.tabs::-webkit-scrollbar { display: none; }
-.tab {
-  flex-shrink: 0;
-  padding: 8px 16px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--hint);
-  cursor: pointer;
-  transition: all .2s;
-}
-.tab.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 4px 16px rgba(102,126,234,.4);
-}
-.leaderboard { display: flex; flex-direction: column; gap: 8px; }
-.leader-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--r-sm);
-  animation: fadeInUp .4s cubic-bezier(.16,1,.3,1) backwards;
-}
-.leader-rank {
-  width: 28px; height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 14px;
-  border-radius: 50%;
-  background: rgba(255,255,255,.06);
-  flex-shrink: 0;
-}
-.leader-rank.top1 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #fff; }
-.leader-rank.top2 { background: linear-gradient(135deg, #e5e7eb, #9ca3af); color: #fff; }
-.leader-rank.top3 { background: linear-gradient(135deg, #d97706, #92400e); color: #fff; }
-.leader-avatar {
-  width: 36px; height: 36px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #fff;
-  font-weight: 600;
-  font-size: 15px;
-  flex-shrink: 0;
-}
-.leader-info { flex: 1; min-width: 0; }
-.leader-name { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.leader-meta { font-size: 11px; color: var(--hint); }
-.leader-value {
-  font-weight: 700;
-  font-size: 15px;
-  background: linear-gradient(135deg, #667eea, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ============================================================
-   TOAST
-   ============================================================ */
-.toast {
-  position: fixed;
-  top: calc(20px + var(--safe-top));
-  left: 50%;
-  transform: translateX(-50%) translateY(-120%);
-  background: rgba(30,30,46,.95);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,.1);
-  color: #fff;
-  padding: 12px 20px;
-  border-radius: 12px;
-  font-size: 14px;
-  font-weight: 500;
-  z-index: 1000;
-  opacity: 0;
-  transition: all .4s cubic-bezier(.16,1,.3,1);
-  max-width: 90vw;
-  box-shadow: 0 8px 32px rgba(0,0,0,.4);
-}
-.toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
-
-/* ============================================================
-   SETTINGS CHIPS
-   ============================================================ */
-.chips {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.chip {
-  padding: 8px 14px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--text);
-  cursor: pointer;
-  transition: all .15s;
-  font-family: inherit;
-}
-.chip:active { transform: scale(.95); }
-.chip.active {
-  background: linear-gradient(135deg, #667eea, #764ba2);
-  color: #fff;
-  border-color: transparent;
-  box-shadow: 0 4px 12px rgba(102,126,234,.35);
-}
-
-/* ============================================================
-   LOADING
-   ============================================================ */
-.loading { display: flex; flex-direction: column; gap: 10px; padding: 20px 0; }
-.skeleton {
-  background: linear-gradient(90deg,
-    rgba(255,255,255,.03) 25%,
-    rgba(255,255,255,.08) 50%,
-    rgba(255,255,255,.03) 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
-  border-radius: 8px;
-  height: 60px;
-}
-@keyframes shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-/* ============================================================
-   HERO
-   ============================================================ */
-.hero {
-  text-align: center;
-  padding: 20px 0 30px;
-  animation: fadeInUp .6s cubic-bezier(.16,1,.3,1);
-}
-.hero-emoji {
-  font-size: 56px;
-  display: block;
-  margin-bottom: 12px;
-  animation: bounceIn .8s cubic-bezier(.16,1,.3,1) .2s backwards;
-}
-@keyframes bounceIn {
-  from { opacity: 0; transform: scale(.3); }
-  60% { transform: scale(1.1); }
-  to { opacity: 1; transform: scale(1); }
-}
-.hero-title {
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #667eea, #a855f7);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-.hero-subtitle { color: var(--hint); font-size: 14px; margin-top: 6px; }
-
-/* ============================================================
-   UTILS
-   ============================================================ */
-.hidden { display: none !important; }
-.row { display: flex; gap: 8px; align-items: center; }
-.mt-8 { margin-top: 8px; }
-.mt-16 { margin-top: 16px; }
-.mb-16 { margin-bottom: 16px; }
-.muted { color: var(--hint); }
-.center { text-align: center; }
-</style>
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/games.css">
 </head>
 <body>
 
@@ -734,6 +19,8 @@ body::before {
        HOME
        ============================================================ -->
   <section class="screen active" id="s-home">
+    <div id="ws-indicator"></div>
+
     <div class="hero">
       <span class="hero-emoji">🎮</span>
       <h1 class="hero-title" id="hero-greet">Привет!</h1>
@@ -764,7 +51,13 @@ body::before {
       <div class="game-card" style="--grad: linear-gradient(135deg, #a855f7, #7c3aed)" data-go="hangman">
         <span class="game-emoji">💀</span>
         <div class="game-name">Виселица</div>
-        <div class="game-desc">8 категорий слов</div>
+        <div class="game-desc">12 категорий слов</div>
+      </div>
+      <div class="game-card" style="--grad: linear-gradient(135deg, #7c5cff, #ec4899)" data-go="mp-ttt">
+        <span class="game-badge net">👥 PvP</span>
+        <span class="game-emoji">⚔️</span>
+        <div class="game-name">Крестики PvP</div>
+        <div class="game-desc">Игра с другом в вебе</div>
       </div>
       <div class="game-card" style="--grad: linear-gradient(135deg, #f59e0b, #ef4444)" data-go="poker">
         <span class="game-badge net">BOT</span>
@@ -777,12 +70,6 @@ body::before {
         <span class="game-emoji">🃏</span>
         <div class="game-name">Дурак</div>
         <div class="game-desc">Подкидной 2-4 игрока</div>
-      </div>
-      <div class="game-card" style="--grad: linear-gradient(135deg, #eab308, #f59e0b)" data-go="tournament">
-        <span class="game-badge net">BOT</span>
-        <span class="game-emoji">🏆</span>
-        <div class="game-name">Sit&Go</div>
-        <div class="game-desc">Турнир с растущими блайндами</div>
       </div>
     </div>
   </section>
@@ -885,32 +172,311 @@ body::before {
   </section>
 
   <!-- ============================================================
-       MULTIPLAYER LAUNCH
+       MULTIPLAYER TTT
        ============================================================ -->
-  <section class="screen" id="s-multi">
+  <section class="screen" id="s-mp-ttt">
     <div class="page-header">
       <div class="back-btn" data-back>←</div>
-      <div>
-        <h1 class="page-title" id="multi-title">♠️ Покер</h1>
-        <p class="page-subtitle" id="multi-sub">Игра с друзьями через бота</p>
+      <div style="flex:1">
+        <h1 class="page-title">⚔️ Крестики PvP</h1>
+        <p class="page-subtitle" id="mp-ttt-sub">Игра с другом</p>
       </div>
     </div>
 
-    <div class="multi-card">
-      <h3 id="multi-header">Играй с друзьями в Telegram</h3>
-      <p>Сетевые игры работают через бота: создай комнату, отправь код друзьям, играйте прямо в чате.</p>
-      <button class="btn block" id="multi-open">
-        🚀 Открыть бота
-      </button>
+    <div id="mp-ttt-lobby">
+      <div class="multi-card">
+        <h3>⚔️ Крестики-нолики с другом</h3>
+        <p>Играй за ❌ или ⭕ — кто первый ходит, решает случай</p>
+
+        <div class="chips" id="mp-ttt-size-chips">
+          <button class="chip active" data-mpsize="3">3×3</button>
+          <button class="chip" data-mpsize="4">4×4</button>
+          <button class="chip" data-mpsize="5">5×5</button>
+        </div>
+
+        <div class="chips">
+          <button class="chip active" data-mppublic="private">🔒 Приватная</button>
+          <button class="chip" data-mppublic="public">🌐 Публичная</button>
+        </div>
+
+        <button class="btn block mt-16" id="mp-ttt-create">
+          🚀 Создать и пригласить
+        </button>
+      </div>
+
+      <div class="quick-actions">
+        <button class="quick-btn" id="mp-ttt-quick-share">
+          <span class="quick-icon">📤</span>
+          <span>Пригласить друга</span>
+        </button>
+        <button class="quick-btn" id="mp-ttt-quick-code">
+          <span class="quick-icon">🔑</span>
+          <span>Войти по коду</span>
+        </button>
+      </div>
+
+      <div id="mp-ttt-join-block" class="game-panel hidden">
+        <div class="center muted mb-16">Введи код комнаты</div>
+        <div class="input-row">
+          <input type="text" id="mp-ttt-join-code" placeholder="Например AB12C"
+                 maxlength="6" style="text-transform:uppercase">
+          <button class="btn" id="mp-ttt-join-btn">→</button>
+        </div>
+      </div>
     </div>
 
-    <div class="section-title">💡 Как играть</div>
-    <div class="game-panel">
-      <p class="mb-16">1️⃣ Открой бота и напиши <b>/start</b></p>
-      <p class="mb-16">2️⃣ Выбери <b>👥 Играть по сети</b></p>
-      <p class="mb-16">3️⃣ Создай комнату, получи код</p>
-      <p class="mb-16">4️⃣ Отправь код друзьям</p>
-      <p>5️⃣ Играйте прямо в чате с ботом 🎉</p>
+    <div id="mp-ttt-wait" class="hidden">
+      <div class="game-panel wait-hero">
+        <div class="center muted">Код комнаты</div>
+        <div class="wait-code" id="mp-ttt-wait-code">—</div>
+        <div class="center muted">Отправь другу ссылку — он тапнет и окажется тут</div>
+      </div>
+
+      <button class="btn block" id="mp-ttt-share">📤 Пригласить друга</button>
+
+      <div class="section-title">👥 Игроки</div>
+      <div class="game-panel">
+        <div class="wait-players-list" id="mp-ttt-wait-players"></div>
+      </div>
+
+      <button class="btn sec block mt-8" id="mp-ttt-leave">🚪 Выйти</button>
+    </div>
+
+    <div id="mp-ttt-game" class="hidden">
+      <div class="game-panel">
+        <div class="mp-players-bar" id="mp-ttt-players-bar"></div>
+      </div>
+      <div class="game-status big" id="mp-ttt-status">—</div>
+      <div class="ttt-board" id="mp-ttt-board"></div>
+      <div class="game-panel mt-16" id="mp-ttt-footer">
+        <div class="center muted" id="mp-ttt-footer-text">Ход соперника</div>
+      </div>
+      <button class="btn sec block mt-8" id="mp-ttt-leave-2">🚪 Покинуть</button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       POKER
+       ============================================================ -->
+  <section class="screen" id="s-poker">
+    <div class="page-header">
+      <div class="back-btn" data-poker-back>←</div>
+      <div style="flex:1">
+        <h1 class="page-title">♠️ Покер</h1>
+        <p class="page-subtitle" id="poker-sub">Лобби</p>
+      </div>
+    </div>
+
+    <div id="poker-lobby">
+      <div class="multi-card">
+        <h3>🎰 Создать стол</h3>
+        <p>Настрой и пригласи друга одним тапом</p>
+        <div class="chips" id="poker-stack-chips">
+          <button class="chip active" data-stack="1000">💰 1 000</button>
+          <button class="chip" data-stack="5000">💰 5 000</button>
+          <button class="chip" data-stack="10000">💰 10 000</button>
+        </div>
+        <div class="chips" id="poker-players-chips">
+          <button class="chip" data-max="2">👥 2</button>
+          <button class="chip active" data-max="4">👥 4</button>
+          <button class="chip" data-max="6">👥 6</button>
+        </div>
+        <div class="chips">
+          <button class="chip active" data-public="private">🔒 Приватная</button>
+          <button class="chip" data-public="public">🌐 Публичная</button>
+        </div>
+        <button class="btn block mt-16" id="poker-create">
+          🚀 Создать и пригласить
+        </button>
+      </div>
+
+      <div class="quick-actions">
+        <button class="quick-btn" id="poker-quick-share">
+          <span class="quick-icon">📤</span>
+          <span>Пригласить друга</span>
+        </button>
+        <button class="quick-btn" id="poker-quick-code">
+          <span class="quick-icon">🔑</span>
+          <span>Войти по коду</span>
+        </button>
+      </div>
+
+      <div class="section-title" id="poker-public-title" style="display:none">
+        🌐 Открытые столы
+      </div>
+      <div id="poker-public-list" class="leaderboard"></div>
+
+      <div id="poker-join-block" class="game-panel hidden">
+        <div class="center muted mb-16">Введи код комнаты</div>
+        <div class="input-row">
+          <input type="text" id="poker-join-code" placeholder="Например AB12C"
+                 maxlength="6" style="text-transform:uppercase">
+          <button class="btn" id="poker-join-btn">→</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="poker-wait" class="hidden">
+      <div class="game-panel wait-hero">
+        <div class="center muted">Код комнаты</div>
+        <div class="wait-code" id="poker-wait-code">—</div>
+        <div class="center muted">Отправь другу ссылку</div>
+      </div>
+      <button class="btn block" id="poker-share">📤 Пригласить друга</button>
+      <div class="section-title">👥 Игроки</div>
+      <div class="game-panel">
+        <div class="wait-players-list" id="poker-wait-players"></div>
+      </div>
+      <button class="btn block mt-8" id="poker-start">🚀 Начать игру</button>
+      <button class="btn sec block mt-8" id="poker-leave">🚪 Выйти</button>
+    </div>
+
+    <div id="poker-game" class="hidden">
+      <div class="poker-table-wrap">
+        <div class="poker-pot">
+          <span class="muted">Банк</span>
+          <span class="pot-value" id="poker-pot">0</span>
+        </div>
+        <div class="poker-stage" id="poker-stage">Префлоп</div>
+        <div class="poker-board" id="poker-board"></div>
+        <div class="poker-players" id="poker-players"></div>
+      </div>
+
+      <div class="section-title">Твои карты</div>
+      <div class="poker-my-hand" id="poker-my-hand"></div>
+      <div class="poker-my-info" id="poker-my-info"></div>
+      <div id="poker-turn-info" style="display:none;margin-bottom:12px"></div>
+      <div class="poker-actions" id="poker-actions"></div>
+      <div class="poker-log" id="poker-log"></div>
+
+      <div class="reactions-panel" id="reactions-panel">
+        <button class="reactions-toggle" id="reactions-toggle">😊</button>
+        <div class="reactions-list hidden" id="reactions-list">
+          <button class="reaction-btn" data-emoji="😎">😎</button>
+          <button class="reaction-btn" data-emoji="🔥">🔥</button>
+          <button class="reaction-btn" data-emoji="😂">😂</button>
+          <button class="reaction-btn" data-emoji="😭">😭</button>
+          <button class="reaction-btn" data-emoji="💀">💀</button>
+          <button class="reaction-btn" data-emoji="🤔">🤔</button>
+          <button class="reaction-btn" data-emoji="👏">👏</button>
+          <button class="reaction-btn" data-emoji="😱">😱</button>
+          <button class="reaction-btn" data-emoji="❤️">❤️</button>
+          <button class="reaction-btn" data-emoji="💩">💩</button>
+          <button class="reaction-btn" data-emoji="🎉">🎉</button>
+          <button class="reaction-btn" data-emoji="🤝">🤝</button>
+        </div>
+      </div>
+
+      <button class="btn sec block mt-16" id="poker-leave-2">🚪 Покинуть стол</button>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       DURAK
+       ============================================================ -->
+  <section class="screen" id="s-durak">
+    <div class="page-header">
+      <div class="back-btn" data-durak-back>←</div>
+      <div style="flex:1">
+        <h1 class="page-title">🃏 Дурак</h1>
+        <p class="page-subtitle" id="durak-sub">Лобби</p>
+      </div>
+    </div>
+
+    <div id="durak-lobby">
+      <div class="multi-card">
+        <h3>🃏 Создать стол</h3>
+        <p>Играй с друзьями в 1 тап</p>
+        <div class="chips" id="durak-players-chips">
+          <button class="chip" data-dmax="2">👥 2</button>
+          <button class="chip active" data-dmax="3">👥 3</button>
+          <button class="chip" data-dmax="4">👥 4</button>
+        </div>
+        <div class="chips">
+          <button class="chip active" data-dpublic="private">🔒 Приватная</button>
+          <button class="chip" data-dpublic="public">🌐 Публичная</button>
+        </div>
+        <button class="btn block mt-16" id="durak-create">🚀 Создать и пригласить</button>
+      </div>
+
+      <div class="quick-actions">
+        <button class="quick-btn" id="durak-quick-share">
+          <span class="quick-icon">📤</span>
+          <span>Пригласить друга</span>
+        </button>
+        <button class="quick-btn" id="durak-quick-code">
+          <span class="quick-icon">🔑</span>
+          <span>Войти по коду</span>
+        </button>
+      </div>
+
+      <div id="durak-join-block" class="game-panel hidden">
+        <div class="center muted mb-16">Введи код комнаты</div>
+        <div class="input-row">
+          <input type="text" id="durak-join-code" placeholder="Например AB12C"
+                 maxlength="6" style="text-transform:uppercase">
+          <button class="btn" id="durak-join-btn">→</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="durak-wait" class="hidden">
+      <div class="game-panel wait-hero">
+        <div class="center muted">Код комнаты</div>
+        <div class="wait-code" id="durak-wait-code">—</div>
+      </div>
+      <button class="btn block" id="durak-share">📤 Пригласить друга</button>
+      <div class="section-title">👥 Игроки</div>
+      <div class="game-panel">
+        <div class="wait-players-list" id="durak-wait-players"></div>
+      </div>
+      <button class="btn block mt-8" id="durak-start">🚀 Начать игру</button>
+      <button class="btn sec block mt-8" id="durak-leave">🚪 Выйти</button>
+    </div>
+
+    <div id="durak-game" class="hidden">
+      <div class="durak-topbar">
+        <div class="durak-trump">
+          <span class="muted">🎺 Козырь</span>
+          <span class="durak-trump-suit" id="durak-trump">—</span>
+        </div>
+        <div class="durak-deck">
+          <span class="muted">Колода</span>
+          <span id="durak-deck-count">—</span>
+        </div>
+      </div>
+
+      <div class="durak-opponents" id="durak-opponents"></div>
+
+      <div class="durak-table" id="durak-table">
+        <div class="durak-table-inner" id="durak-table-inner">
+          <div class="center muted">Ожидание…</div>
+        </div>
+      </div>
+
+      <div class="durak-my-hand" id="durak-my-hand"></div>
+      <div class="durak-hint" id="durak-hint"></div>
+      <div class="durak-actions" id="durak-actions"></div>
+
+      <div class="reactions-panel" id="reactions-panel-durak">
+        <button class="reactions-toggle" id="reactions-toggle-durak">😊</button>
+        <div class="reactions-list hidden" id="reactions-list-durak">
+          <button class="reaction-btn" data-emoji="😎">😎</button>
+          <button class="reaction-btn" data-emoji="🔥">🔥</button>
+          <button class="reaction-btn" data-emoji="😂">😂</button>
+          <button class="reaction-btn" data-emoji="😭">😭</button>
+          <button class="reaction-btn" data-emoji="💀">💀</button>
+          <button class="reaction-btn" data-emoji="🤔">🤔</button>
+          <button class="reaction-btn" data-emoji="👏">👏</button>
+          <button class="reaction-btn" data-emoji="😱">😱</button>
+          <button class="reaction-btn" data-emoji="❤️">❤️</button>
+          <button class="reaction-btn" data-emoji="💩">💩</button>
+          <button class="reaction-btn" data-emoji="🎉">🎉</button>
+          <button class="reaction-btn" data-emoji="🤝">🤝</button>
+        </div>
+      </div>
+
+      <button class="btn sec block mt-16" id="durak-leave-2">🚪 Покинуть стол</button>
     </div>
   </section>
 
@@ -929,6 +495,13 @@ body::before {
         <p id="prof-username">—</p>
       </div>
     </div>
+
+    <button class="btn block mb-16" onclick="haptic('medium'); go('stats'); loadStats()">
+      📈 Полная статистика
+    </button>
+    <button class="btn block mb-16" onclick="haptic('medium'); go('history'); loadHistory()">
+      📜 История партий
+    </button>
 
     <div class="stats-row">
       <div class="stat-box">
@@ -952,6 +525,129 @@ body::before {
         <div class="skeleton"></div>
       </div>
     </div>
+  </section>
+
+  <!-- ============================================================
+       STATS
+       ============================================================ -->
+  <section class="screen" id="s-stats">
+    <div class="page-header">
+      <div class="back-btn" data-back>←</div>
+      <div>
+        <h1 class="page-title">📈 Статистика</h1>
+        <p class="page-subtitle">Подробный разбор</p>
+      </div>
+    </div>
+
+    <div class="section-title">🎯 Общие показатели</div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value" id="stats-wins">—</div>
+        <div class="stat-label">Побед</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stats-losses">—</div>
+        <div class="stat-label">Поражений</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stats-draws">—</div>
+        <div class="stat-label">Ничьих</div>
+      </div>
+    </div>
+
+    <div class="game-panel">
+      <div class="center muted mb-8">📊 Winrate</div>
+      <div class="stats-wr-bar"><div class="stats-wr-fill" id="stats-wr-fill"></div></div>
+      <div class="center" style="font-size:24px; font-weight:800; margin-top:10px">
+        <span id="stats-wr-value">—</span>%
+      </div>
+    </div>
+
+    <div class="section-title">🎖 Достижения</div>
+    <div class="game-panel">
+      <div class="stats-progress">
+        <div class="stats-progress-label">
+          <span>Открыто</span>
+          <span id="stats-ach-count">0/0</span>
+        </div>
+        <div class="stats-wr-bar">
+          <div class="stats-wr-fill gold" id="stats-ach-fill"></div>
+        </div>
+      </div>
+      <div class="center mt-16" style="font-size:16px">
+        ⭐ Очки: <b id="stats-points">—</b> · 🏅 Ранг: <b id="stats-rank">—</b>
+      </div>
+    </div>
+
+    <div class="section-title">🎮 По играм</div>
+    <div class="stats-per-game" id="stats-per-game">
+      <div class="loading">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </div>
+
+    <div class="section-title">♠️ Покер</div>
+    <div class="game-panel" id="stats-poker-panel">
+      <div class="center muted">Загрузка…</div>
+    </div>
+
+    <div class="section-title">📈 Динамика банкролла</div>
+    <div class="game-panel">
+      <canvas id="chart-bankroll" style="width:100%;height:180px;display:block"></canvas>
+      <div class="center muted mt-8" id="chart-bankroll-empty" style="display:none">
+        Мало данных — сыграй несколько партий
+      </div>
+    </div>
+
+    <div class="section-title">📅 Активность по дням</div>
+    <div class="game-panel">
+      <canvas id="chart-activity" style="width:100%;height:140px;display:block"></canvas>
+      <div class="center muted mt-8" id="chart-activity-empty" style="display:none">
+        Нет активности за последние 30 дней
+      </div>
+    </div>
+
+    <div class="section-title">🏅 Рекорды</div>
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-value" id="stats-best-day">—</div>
+        <div class="stat-label">Лучший день</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stats-worst-day">—</div>
+        <div class="stat-label">Худший день</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-value" id="stats-fav-game">—</div>
+        <div class="stat-label">Любимая</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================
+       HISTORY
+       ============================================================ -->
+  <section class="screen" id="s-history">
+    <div class="page-header">
+      <div class="back-btn" data-back>←</div>
+      <div>
+        <h1 class="page-title">📜 История</h1>
+        <p class="page-subtitle">Последние партии</p>
+      </div>
+    </div>
+
+    <div id="history-stats"></div>
+
+    <div class="section-title">🕐 Последние партии</div>
+    <div class="match-list" id="history-list">
+      <div class="loading">
+        <div class="skeleton"></div>
+        <div class="skeleton"></div>
+      </div>
+    </div>
+
+    <button class="btn sec block mt-16" id="history-refresh">🔄 Обновить</button>
   </section>
 
   <!-- ============================================================
@@ -1040,860 +736,39 @@ body::before {
 
 <div class="toast" id="toast"></div>
 
-<script>
-/* ============================================================
-   TELEGRAM SDK
-   ============================================================ */
-const tg = window.Telegram?.WebApp;
-const INIT_DATA = tg?.initData || '';
-const BOT_USERNAME = 'games_all_bot';  // ← поменяй если другой
-const API_URL = '';  // ← вставь cloudflared URL когда будет
-
-function initTelegram() {
-  if (!tg) return;
-  tg.ready();
-  tg.expand();
-  tg.setHeaderColor?.('secondary_bg_color');
-  tg.setBackgroundColor?.('bg_color');
-  tg.enableClosingConfirmation?.();
-
-  const user = tg.initDataUnsafe?.user;
-  if (user) {
-    const name = user.first_name || 'друг';
-    document.getElementById('hero-greet').textContent = `Привет, ${name}!`;
-    document.getElementById('prof-name').textContent =
-      `${user.first_name || ''} ${user.last_name || ''}`.trim() || 'Игрок';
-    document.getElementById('prof-username').textContent =
-      user.username ? `@${user.username}` : `id${user.id}`;
-    const av = document.getElementById('prof-avatar');
-    if (user.photo_url) {
-      av.innerHTML = `<img src="${user.photo_url}" alt="">`;
-    } else {
-      av.textContent = (user.first_name?.[0] || '?').toUpperCase();
-    }
-  }
-}
-
-function haptic(type = 'light') {
-  try { tg?.HapticFeedback?.impactOccurred(type); } catch(e) {}
-}
-
-let toastTimer;
-function toast(text, duration = 2000) {
-  const el = document.getElementById('toast');
-  el.textContent = text;
-  el.classList.add('show');
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => el.classList.remove('show'), duration);
-}
-
-/* ============================================================
-   API
-   ============================================================ */
-async function api(path, params = {}) {
-  if (!API_URL) throw new Error('API не настроен');
-  const url = new URL(API_URL + path);
-  Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
-  const res = await fetch(url.toString(), {
-    headers: { 'X-Init-Data': INIT_DATA }
-  });
-  if (!res.ok) throw new Error(`API ${res.status}`);
-  return res.json();
-}
-
-/* ============================================================
-   ROUTER
-   ============================================================ */
-const screens = {
-  home: document.getElementById('s-home'),
-  guess: document.getElementById('s-guess'),
-  ttt: document.getElementById('s-ttt'),
-  hangman: document.getElementById('s-hangman'),
-  multi: document.getElementById('s-multi'),
-  profile: document.getElementById('s-profile'),
-  top: document.getElementById('s-top'),
-  ach: document.getElementById('s-ach'),
-};
-
-let currentScreen = 'home';
-
-function go(name) {
-  if (!screens[name]) return;
-  Object.entries(screens).forEach(([k, el]) => el.classList.toggle('active', k === name));
-  document.querySelectorAll('.nav-item').forEach(n => {
-    n.classList.toggle('active', n.dataset.nav === name);
-  });
-  currentScreen = name;
-  haptic('light');
-
-  // Ленивая загрузка данных
-  if (name === 'profile') loadProfile();
-  if (name === 'top') loadTops();
-  if (name === 'ach') loadAchievements();
-}
-
-/* ============================================================
-   BOTTOM NAV
-   ============================================================ */
-document.querySelectorAll('.nav-item').forEach(item => {
-  item.addEventListener('click', () => {
-    const target = item.dataset.nav;
-    if (target === 'bot') {
-      tg?.openTelegramLink?.(`https://t.me/${BOT_USERNAME}`);
-      return;
-    }
-    go(target);
-  });
-});
-
-/* ============================================================
-   BACK BUTTONS
-   ============================================================ */
-document.querySelectorAll('[data-back]').forEach(btn => {
-  btn.addEventListener('click', () => go('home'));
-});
-
-/* ============================================================
-   GAME CARDS
-   ============================================================ */
-document.querySelectorAll('.game-card').forEach(card => {
-  card.addEventListener('click', () => {
-    const g = card.dataset.go;
-    haptic('medium');
-    if (g === 'guess') { initGuess(); go('guess'); }
-    else if (g === 'ttt') { initTTT(); go('ttt'); }
-    else if (g === 'hangman') { initHangman(); go('hangman'); }
-    else if (g === 'poker') { openMulti('poker'); }
-    else if (g === 'durak') { openMulti('durak'); }
-    else if (g === 'tournament') { openMulti('tournament'); }
-  });
-});
-
-/* ============================================================
-   LOAD BALANCE
-   ============================================================ */
-async function loadBalance() {
-  const el = document.getElementById('balance');
-  if (!API_URL) {
-    // Фейковый баланс если API не настроен
-    el.textContent = '1 000';
-    return;
-  }
-  try {
-    const data = await api('/api/me');
-    animateNumber(el, data.balance);
-  } catch (e) {
-    el.textContent = '—';
-  }
-}
-
-function animateNumber(el, target) {
-  let cur = 0;
-  const step = Math.max(1, Math.ceil(target / 20));
-  const t = setInterval(() => {
-    cur = Math.min(cur + step, target);
-    el.textContent = cur.toLocaleString('ru-RU');
-    if (cur >= target) clearInterval(t);
-  }, 30);
-}
-
-/* ============================================================
-   GUESS GAME
-   ============================================================ */
-const GUESS_RANGES = {
-  tiny:   { min: 1, max: 10,    label: '1-10' },
-  small:  { min: 1, max: 100,   label: '1-100' },
-  medium: { min: 1, max: 1000,  label: '1-1000' },
-  huge:   { min: 1, max: 10000, label: '1-10000' },
-};
-
-let guessState = {
-  range: 'small',
-  secret: 0,
-  attempts: 0,
-  low: 0,
-  high: 0,
-  finished: false,
-  history: [],
-  started: 0,
-};
-
-function initGuess() {
-  newGuessGame();
-}
-
-function newGuessGame() {
-  const cfg = GUESS_RANGES[guessState.range];
-  guessState.secret = Math.floor(Math.random() * (cfg.max - cfg.min + 1)) + cfg.min;
-  guessState.attempts = 0;
-  guessState.low = cfg.min;
-  guessState.high = cfg.max;
-  guessState.finished = false;
-  guessState.history = [];
-  guessState.started = Date.now();
-
-  document.getElementById('guess-sub').textContent = `${cfg.label} · 🟡 Средний`;
-  document.getElementById('guess-status').textContent = `Я загадал число ${cfg.label}`;
-  document.getElementById('guess-hint').textContent = '';
-  document.getElementById('guess-history').innerHTML = '';
-  document.getElementById('guess-input').value = '';
-  document.getElementById('guess-input').focus();
-}
-
-document.querySelectorAll('[data-guess-range]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    guessState.range = chip.dataset.guessRange;
-    document.querySelectorAll('[data-guess-range]').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    newGuessGame();
-    haptic('light');
-  });
-});
-
-document.getElementById('guess-send').addEventListener('click', sendGuess);
-document.getElementById('guess-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter') sendGuess();
-});
-document.getElementById('guess-new').addEventListener('click', () => {
-  newGuessGame();
-  haptic('medium');
-});
-
-function sendGuess() {
-  if (guessState.finished) return;
-  const inp = document.getElementById('guess-input');
-  const n = parseInt(inp.value);
-  if (!n || n < GUESS_RANGES[guessState.range].min || n > GUESS_RANGES[guessState.range].max) {
-    toast('Введи число из диапазона');
-    return;
-  }
-  inp.value = '';
-  haptic('light');
-  guessState.attempts++;
-
-  const s = guessState.secret;
-  let hint, mark;
-
-  if (n < s) {
-    hint = '⬆️ Больше!';
-    mark = '⬆️';
-    guessState.low = Math.max(guessState.low, n + 1);
-  } else if (n > s) {
-    hint = '⬇️ Меньше!';
-    mark = '⬇️';
-    guessState.high = Math.min(guessState.high, n - 1);
-  } else {
-    hint = '🎯 Верно!';
-    mark = '🎯';
-    guessState.finished = true;
-  }
-
-  guessState.history.push({ n, mark, hint });
-
-  // Обновляем UI
-  const statusEl = document.getElementById('guess-status');
-  const hintEl = document.getElementById('guess-hint');
-  const histEl = document.getElementById('guess-history');
-
-  if (guessState.finished) {
-    const dur = ((Date.now() - guessState.started) / 1000).toFixed(1);
-    statusEl.innerHTML = `🎉 <b>Верно!</b> Это было число <b>${s}</b>`;
-    hintEl.innerHTML =
-      `Попыток: <b>${guessState.attempts}</b> · Время: <b>${dur}с</b>`;
-    haptic('heavy');
-    saveGuessResult(true);
-  } else {
-    statusEl.textContent = `${hint} (попытка ${guessState.attempts})`;
-    hintEl.innerHTML = `Возможный диапазон: <b>${guessState.low}–${guessState.high}</b>`;
-    // Не показываем секрет в toast
-    haptic('light');
-  }
-
-  // История
-  histEl.innerHTML = guessState.history.slice(-10).reverse().map(h =>
-    `<div class="attempt">
-      <span class="num">${h.n}</span>
-      <span class="hint">${h.hint}</span>
-    </div>`
-  ).join('');
-}
-
-async function saveGuessResult(win) {
-  if (!API_URL) return;
-  // API вызов — можно добавить POST /api/game_result
-}
-
-/* ============================================================
-   TIC-TAC-TOE
-   ============================================================ */
-let tttState = {
-  size: 3,
-  difficulty: 'hard',
-  board: [],
-  finished: false,
-  winner: null,
-  winLine: [],
-  toMove: 'X',
-};
-
-function initTTT() {
-  newTTT();
-}
-
-function newTTT() {
-  tttState.board = new Array(tttState.size * tttState.size).fill('');
-  tttState.finished = false;
-  tttState.winner = null;
-  tttState.winLine = [];
-  tttState.toMove = 'X';
-  renderTTT();
-  document.getElementById('ttt-status').textContent = 'Твой ход';
-}
-
-function renderTTT() {
-  const board = document.getElementById('ttt-board');
-  const n = tttState.size;
-  board.style.gridTemplateColumns = `repeat(${n}, 1fr)`;
-
-  const ICON = { X: '❌', O: '⭕', '': '' };
-  board.innerHTML = '';
-
-  for (let i = 0; i < tttState.board.length; i++) {
-    const cell = document.createElement('div');
-    cell.className = 'ttt-cell';
-    const v = tttState.board[i];
-    if (v) {
-      cell.classList.add('played');
-      cell.textContent = ICON[v];
-    }
-    if (tttState.winLine.includes(i)) {
-      cell.classList.add(tttState.winner === 'X' ? 'win-line' : 'lose-line');
-    }
-    cell.addEventListener('click', () => tttMove(i));
-    board.appendChild(cell);
-  }
-}
-
-function tttMove(idx) {
-  if (tttState.finished || tttState.board[idx] || tttState.toMove !== 'X') return;
-  haptic('light');
-  tttState.board[idx] = 'X';
-
-  const win = tttCheck('X');
-  if (win) {
-    tttState.finished = true;
-    tttState.winner = 'X';
-    tttState.winLine = win;
-    document.getElementById('ttt-status').innerHTML = '🎉 <b>Ты победил!</b>';
-    renderTTT();
-    haptic('heavy');
-    return;
-  }
-  if (!tttState.board.includes('')) {
-    tttState.finished = true;
-    tttState.winner = 'draw';
-    document.getElementById('ttt-status').textContent = '🤝 Ничья';
-    renderTTT();
-    return;
-  }
-
-  tttState.toMove = 'O';
-  renderTTT();
-  document.getElementById('ttt-status').textContent = '🤔 Бот думает...';
-
-  setTimeout(() => {
-    const move = tttBestMove();
-    if (move === null) return;
-    tttState.board[move] = 'O';
-    const winB = tttCheck('O');
-    if (winB) {
-      tttState.finished = true;
-      tttState.winner = 'O';
-      tttState.winLine = winB;
-      document.getElementById('ttt-status').innerHTML = '😢 <b>Бот победил</b>';
-      haptic('heavy');
-    } else if (!tttState.board.includes('')) {
-      tttState.finished = true;
-      tttState.winner = 'draw';
-      document.getElementById('ttt-status').textContent = '🤝 Ничья';
-    } else {
-      tttState.toMove = 'X';
-      document.getElementById('ttt-status').textContent = '🎯 Твой ход';
-    }
-    renderTTT();
-  }, 250);
-}
-
-function tttCheck(symbol) {
-  const n = tttState.size;
-  const w = n === 3 ? 3 : 4; // win length
-  const b = tttState.board;
-
-  // Горизонтали
-  for (let r = 0; r < n; r++) {
-    for (let c = 0; c <= n - w; c++) {
-      let ok = true;
-      for (let k = 0; k < w; k++) if (b[r * n + c + k] !== symbol) ok = false;
-      if (ok) return Array.from({ length: w }, (_, k) => r * n + c + k);
-    }
-  }
-  // Вертикали
-  for (let c = 0; c < n; c++) {
-    for (let r = 0; r <= n - w; r++) {
-      let ok = true;
-      for (let k = 0; k < w; k++) if (b[(r + k) * n + c] !== symbol) ok = false;
-      if (ok) return Array.from({ length: w }, (_, k) => (r + k) * n + c);
-    }
-  }
-  // ↘
-  for (let r = 0; r <= n - w; r++) {
-    for (let c = 0; c <= n - w; c++) {
-      let ok = true;
-      for (let k = 0; k < w; k++) if (b[(r + k) * n + c + k] !== symbol) ok = false;
-      if (ok) return Array.from({ length: w }, (_, k) => (r + k) * n + c + k);
-    }
-  }
-  // ↙
-  for (let r = 0; r <= n - w; r++) {
-    for (let c = w - 1; c < n; c++) {
-      let ok = true;
-      for (let k = 0; k < w; k++) if (b[(r + k) * n + c - k] !== symbol) ok = false;
-      if (ok) return Array.from({ length: w }, (_, k) => (r + k) * n + c - k);
-    }
-  }
-  return null;
-}
-
-function tttBestMove() {
-  const b = tttState.board;
-  const empty = [];
-  for (let i = 0; i < b.length; i++) if (!b[i]) empty.push(i);
-  if (!empty.length) return null;
-
-  const diff = tttState.difficulty;
-
-  // Лёгкий — 70% рандом
-  if (diff === 'easy' && Math.random() < 0.7) {
-    return empty[Math.floor(Math.random() * empty.length)];
-  }
-  // Средний — 30% рандом
-  if (diff === 'medium' && Math.random() < 0.3) {
-    return empty[Math.floor(Math.random() * empty.length)];
-  }
-
-  // Победить сейчас
-  for (const i of empty) {
-    b[i] = 'O';
-    if (tttCheck('O')) { b[i] = ''; return i; }
-    b[i] = '';
-  }
-  // Заблокировать
-  for (const i of empty) {
-    b[i] = 'X';
-    if (tttCheck('X')) { b[i] = ''; return i; }
-    b[i] = '';
-  }
-  // Для 3×3 minimal — попробуем центр / углы
-  if (tttState.size === 3) {
-    if (!b[4]) return 4;
-    const corners = [0, 2, 6, 8].filter(i => !b[i]);
-    if (corners.length) return corners[Math.floor(Math.random() * corners.length)];
-    return empty[Math.floor(Math.random() * empty.length)];
-  }
-  // Для 4×4/5×5 — центр ближе
-  const center = Math.floor(b.length / 2);
-  if (!b[center]) return center;
-  return empty[Math.floor(Math.random() * empty.length)];
-}
-
-document.querySelectorAll('[data-ttt-size]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    tttState.size = parseInt(chip.dataset.tttSize);
-    document.querySelectorAll('[data-ttt-size]').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    newTTT();
-    haptic('light');
-  });
-});
-
-document.querySelectorAll('[data-ttt-diff]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    tttState.difficulty = chip.dataset.tttDiff;
-    document.querySelectorAll('[data-ttt-diff]').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    haptic('light');
-  });
-});
-
-document.getElementById('ttt-new').addEventListener('click', () => {
-  newTTT();
-  haptic('medium');
-});
-
-/* ============================================================
-   HANGMAN
-   ============================================================ */
-const HM_WORDS = {
-  animals: {
-    label: '🐾 Животные',
-    easy: ['кот', 'пёс', 'лев', 'тигр', 'слон'],
-    medium: ['пингвин', 'медведь', 'жираф', 'дельфин'],
-    hard: ['гиппопотам', 'орангутан'],
-  },
-  cities: {
-    label: '🏙 Города',
-    easy: ['москва', 'париж', 'рим'],
-    medium: ['токио', 'лондон', 'берлин', 'пекин'],
-    hard: ['екатеринбург', 'новосибирск'],
-  },
-  it: {
-    label: '💻 IT',
-    easy: ['байт', 'файл', 'код', 'сервер'],
-    medium: ['ноутбук', 'алгоритм', 'программа'],
-    hard: ['программист', 'компилятор'],
-  },
-  space: {
-    label: '🚀 Космос',
-    easy: ['луна', 'марс', 'звезда'],
-    medium: ['планета', 'галактика', 'телескоп'],
-    hard: ['вселенная', 'гравитация'],
-  },
-  food: {
-    label: '🍕 Еда',
-    easy: ['суп', 'хлеб', 'сыр', 'борщ'],
-    medium: ['пицца', 'пельмени', 'шоколад'],
-    hard: ['шарлотка', 'круассан'],
-  },
-  sport: {
-    label: '⚽ Спорт',
-    easy: ['бег', 'мяч', 'гол', 'бокс'],
-    medium: ['футбол', 'хоккей', 'теннис'],
-    hard: ['баскетбол', 'фехтование'],
-  },
-};
-
-const HM_ALPHABET = 'абвгдеёжзийклмнопрстуфхцчшщъыьэюя';
-const HM_MAX_MISTAKES = 6;
-
-const HM_STAGES = [
-`  +---+
-  |   |
-      |
-      |
-      |
-      |
-=========`,
-`  +---+
-  |   |
-  O   |
-      |
-      |
-      |
-=========`,
-`  +---+
-  |   |
-  O   |
-  |   |
-      |
-      |
-=========`,
-`  +---+
-  |   |
-  O   |
- /|   |
-      |
-      |
-=========`,
-`  +---+
-  |   |
-  O   |
- /|\\  |
-      |
-      |
-=========`,
-`  +---+
-  |   |
-  O   |
- /|\\  |
- /    |
-      |
-=========`,
-`  +---+
-  |   |
-  O   |
- /|\\  |
- / \\  |
-      |
-=========`,
-];
-
-let hmState = {
-  category: 'random',
-  word: '',
-  guessed: new Set(),
-  mistakes: 0,
-  finished: false,
-  won: false,
-};
-
-function initHangman() {
-  newHangman();
-}
-
-function newHangman() {
-  // Категория
-  let cat = hmState.category;
-  if (cat === 'random') {
-    const keys = Object.keys(HM_WORDS);
-    cat = keys[Math.floor(Math.random() * keys.length)];
-  }
-  const pool = HM_WORDS[cat].medium;
-  hmState.word = pool[Math.floor(Math.random() * pool.length)].toLowerCase();
-  hmState.guessed = new Set();
-  hmState.mistakes = 0;
-  hmState.finished = false;
-  hmState.won = false;
-
-  document.getElementById('hangman-sub').textContent = `Категория: ${HM_WORDS[cat].label}`;
-  renderHangman();
-}
-
-function renderHangman() {
-  // Фигура
-  const fig = document.getElementById('hangman-figure');
-  fig.textContent = HM_STAGES[Math.min(hmState.mistakes, HM_STAGES.length - 1)];
-
-  // Слово
-  const wordEl = document.getElementById('hangman-word');
-  wordEl.innerHTML = hmState.word.split('').map(ch =>
-    hmState.guessed.has(ch) ? ch.toUpperCase() : '_'
-  ).join(' ');
-
-  // Жизни
-  const lives = HM_MAX_MISTAKES - hmState.mistakes;
-  const hearts = '❤️'.repeat(lives) + '🖤'.repeat(HM_MAX_MISTAKES - lives);
-  document.getElementById('hangman-lives').textContent = hearts;
-
-  // Буквы
-  const letters = document.getElementById('hangman-letters');
-  letters.innerHTML = '';
-  for (const ch of HM_ALPHABET) {
-    const btn = document.createElement('button');
-    btn.className = 'letter-btn';
-    btn.textContent = ch;
-    if (hmState.guessed.has(ch)) {
-      btn.disabled = true;
-      if (hmState.word.includes(ch)) btn.classList.add('correct');
-      else btn.classList.add('wrong');
-    }
-    btn.addEventListener('click', () => hmGuess(ch, btn));
-    letters.appendChild(btn);
-  }
-
-  // Статус
-  if (hmState.finished) {
-    if (hmState.won) toast('🎉 Победа!', 3000);
-    else toast(`💀 Проигрыш. Слово: ${hmState.word.toUpperCase()}`, 4000);
-  }
-}
-
-function hmGuess(ch, btn) {
-  if (hmState.finished || hmState.guessed.has(ch)) return;
-  haptic('light');
-  hmState.guessed.add(ch);
-  if (!hmState.word.includes(ch)) hmState.mistakes++;
-
-  // Проверка победы
-  const won = hmState.word.split('').every(c => hmState.guessed.has(c));
-  if (won) {
-    hmState.finished = true;
-    hmState.won = true;
-    haptic('heavy');
-  } else if (hmState.mistakes >= HM_MAX_MISTAKES) {
-    hmState.finished = true;
-    hmState.won = false;
-    haptic('heavy');
-  }
-  renderHangman();
-}
-
-document.querySelectorAll('[data-hm-cat]').forEach(chip => {
-  chip.addEventListener('click', () => {
-    hmState.category = chip.dataset.hmCat;
-    document.querySelectorAll('[data-hm-cat]').forEach(c => c.classList.remove('active'));
-    chip.classList.add('active');
-    newHangman();
-    haptic('light');
-  });
-});
-
-document.getElementById('hangman-new').addEventListener('click', () => {
-  newHangman();
-  haptic('medium');
-});
-
-/* ============================================================
-   MULTIPLAYER LAUNCH
-   ============================================================ */
-function openMulti(game) {
-  const titles = {
-    poker: '♠️ Покер',
-    durak: '🃏 Дурак',
-    tournament: '🏆 Sit&Go турнир',
-  };
-  document.getElementById('multi-title').textContent = titles[game] || 'Игра';
-  go('multi');
-  haptic('medium');
-}
-
-document.getElementById('multi-open').addEventListener('click', () => {
-  tg?.openTelegramLink?.(`https://t.me/${BOT_USERNAME}`);
-  haptic('medium');
-});
-
-/* ============================================================
-   PROFILE
-   ============================================================ */
-let profileLoaded = false;
-
-async function loadProfile() {
-  if (!API_URL) {
-    document.getElementById('prof-games-list').innerHTML =
-      '<div class="center muted" style="padding:20px">API не настроен.<br>Открой бота для игры.</div>';
-    return;
-  }
-  try {
-    const data = await api('/api/me');
-    document.getElementById('prof-games').textContent = data.stats.total_games;
-    document.getElementById('prof-wins').textContent = data.stats.total_wins;
-    document.getElementById('prof-wr').textContent = data.stats.winrate + '%';
-
-    const list = document.getElementById('prof-games-list');
-    if (!data.stats.games.length) {
-      list.innerHTML = '<div class="center muted" style="padding:20px">Сыграй первую игру!</div>';
-      return;
-    }
-    const EMO = { poker: '♠️', durak: '🃏', guess: '🎯', ttt: '❌', hangman: '💀' };
-    const NAME = { poker: 'Покер', durak: 'Дурак', guess: 'Угадай число', ttt: 'Крестики', hangman: 'Виселица' };
-    list.innerHTML = data.stats.games.map((g, i) => {
-      const wr = g.played ? Math.round(g.wins / g.played * 100) : 0;
-      return `
-        <div class="game-stat" style="animation-delay:${i * 0.05}s">
-          <div class="game-stat-emoji">${EMO[g.game] || '🎮'}</div>
-          <div class="game-stat-info">
-            <div class="game-stat-title">${NAME[g.game] || g.game}</div>
-            <div class="game-stat-meta">${g.played} игр · ${g.wins} побед</div>
-          </div>
-          <div class="game-stat-wr">${wr}%</div>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    document.getElementById('prof-games-list').innerHTML =
-      '<div class="center muted" style="padding:20px">Не удалось загрузить данные</div>';
-  }
-}
-
-/* ============================================================
-   TOPS
-   ============================================================ */
-async function loadTops(tab = 'bankroll') {
-  const container = document.getElementById('leaderboard');
-  container.innerHTML = `
-    <div class="loading">
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
-      <div class="skeleton"></div>
-    </div>`;
-
-  if (!API_URL) {
-    container.innerHTML = '<div class="center muted" style="padding:40px">API не настроен</div>';
-    return;
-  }
-
-  try {
-    const url = tab === 'bankroll'
-      ? '/api/tops?tab=bankroll'
-      : `/api/tops?tab=${tab}`;
-    const data = await api(url);
-    if (!data.items.length) {
-      container.innerHTML = '<div class="center muted" style="padding:40px">Пока пусто 🤷</div>';
-      return;
-    }
-    container.innerHTML = data.items.map((it, i) => {
-      const rankCls = i === 0 ? 'top1' : i === 1 ? 'top2' : i === 2 ? 'top3' : '';
-      const initial = (it.name[0] || '?').toUpperCase();
-      return `
-        <div class="leader-item" style="animation-delay:${i * 0.04}s">
-          <div class="leader-rank ${rankCls}">${i + 1}</div>
-          <div class="leader-avatar">${initial}</div>
-          <div class="leader-info">
-            <div class="leader-name">${it.name}</div>
-            <div class="leader-meta">${it.meta || ''}</div>
-          </div>
-          <div class="leader-value">${(it.value || 0).toLocaleString('ru-RU')}</div>
-        </div>
-      `;
-    }).join('');
-  } catch (e) {
-    container.innerHTML = '<div class="center muted" style="padding:40px">Ошибка загрузки</div>';
-  }
-}
-
-document.querySelectorAll('[data-top-tab]').forEach(tab => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('[data-top-tab]').forEach(t => t.classList.remove('active'));
-    tab.classList.add('active');
-    haptic('light');
-    loadTops(tab.dataset.topTab);
-  });
-});
-
-/* ============================================================
-   ACHIEVEMENTS
-   ============================================================ */
-async function loadAchievements() {
-  const grid = document.getElementById('ach-grid');
-
-  if (!API_URL) {
-    grid.innerHTML = '<div class="center muted" style="grid-column:1/-1;padding:40px">API не настроен</div>';
-    return;
-  }
-
-  try {
-    const data = await api('/api/achievements');
-    document.getElementById('ach-count').textContent = `${data.unlocked}/${data.total}`;
-    document.getElementById('ach-points').textContent = data.points;
-    document.getElementById('ach-rank').textContent = data.rank.split(' ')[0] || '—';
-
-    grid.innerHTML = data.items.map((a, i) => `
-      <div class="ach-card ${a.unlocked ? 'unlocked' : 'locked'}"
-           style="animation-delay:${Math.min(i * 0.02, 0.5)}s">
-        <div class="ach-emoji">${a.emoji}</div>
-        <div class="ach-title">${a.title}</div>
-        <div class="ach-desc">${a.desc}</div>
-      </div>
-    `).join('');
-  } catch (e) {
-    grid.innerHTML = '<div class="center muted" style="grid-column:1/-1;padding:40px">Ошибка загрузки</div>';
-  }
-}
-
-/* ============================================================
-   INIT
-   ============================================================ */
-window.addEventListener('load', () => {
-  initTelegram();
-  loadBalance();
-  // Немного анимируем баланс
-  setTimeout(() => {
-    const el = document.getElementById('balance');
-    if (el.textContent === '—') el.textContent = '1 000';
-  }, 500);
-});
-
-// Обработка кнопки "Назад" в Telegram (свайп)
-tg?.onEvent?.('backButtonClicked', () => go('home'));
-</script>
+<!-- SHARE MODAL -->
+<div class="share-modal" id="share-modal">
+  <div class="share-sheet">
+    <div class="share-title">🎮 Пригласи друга</div>
+    <div class="share-sub">Отправь ссылку — он сразу попадёт в игру</div>
+    <div class="share-code-big" id="share-code">—</div>
+    <div class="share-actions">
+      <button class="btn block" id="share-telegram">📤 Отправить в Telegram</button>
+      <button class="btn sec block" id="share-copy-link">🔗 Скопировать ссылку</button>
+      <button class="btn sec block" id="share-copy-code">📋 Скопировать код</button>
+      <button class="btn sec block" id="share-close">✖️ Закрыть</button>
+    </div>
+  </div>
+</div>
+
+<!-- JS -->
+<script src="js/core.js" defer></script>
+<script src="js/utils.js" defer></script>
+<script src="js/sounds.js" defer></script>
+<script src="js/api.js" defer></script>
+<script src="js/ui.js" defer></script>
+<script src="js/games/guess.js" defer></script>
+<script src="js/games/ttt.js" defer></script>
+<script src="js/games/hangman.js" defer></script>
+<script src="js/games/snake.js" defer></script>
+<script src="js/games/g2048.js" defer></script>
+<script src="js/net/poker.js" defer></script>
+<script src="js/net/durak.js" defer></script>
+<script src="js/net/mp-ttt.js" defer></script>
+<script src="js/profile.js" defer></script>
+<script src="js/tops.js" defer></script>
+<script src="js/achievements.js" defer></script>
+<script src="js/share.js" defer></script>
+<script src="js/init.js" defer></script>
 </body>
 </html>
