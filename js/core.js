@@ -5,7 +5,7 @@
 const tg = window.Telegram?.WebApp;
 const INIT_DATA = tg?.initData || '';
 const BOT_USERNAME = 'games_all_bot';
-const API_URL = 'https://2b447e0f97d440.lhr.life';  // ← вставь cloudflared URL, если есть
+const API_URL = 'https://d4af4259433a7a.lhr.life';  // ← вставь cloudflared URL, если есть
 
 // Утилита: текущий user id
 const getUserId = () => tg?.initDataUnsafe?.user?.id;
