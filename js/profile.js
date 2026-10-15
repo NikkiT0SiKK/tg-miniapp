@@ -6,13 +6,10 @@ const GAME_NAMES_MAP = {
     guess:   { emoji: '🎯', name: 'Угадай число' },
     ttt:     { emoji: '❌', name: 'Крестики-нолики' },
     hangman: { emoji: '💀', name: 'Виселица' },
-    poker:   { emoji: '♠️', name: 'Покер' },
-    durak:   { emoji: '🃏', name: 'Дурак' },
 };
 
 const MATCH_ICONS = {
     guess: '🎯', ttt: '❌', hangman: '💀',
-    poker: '♠️', durak: '🃏',
 };
 
 const RESULT_META = {
@@ -67,10 +64,7 @@ async function loadStats() {
         return;
     }
     try {
-        const [me, poker] = await Promise.all([
-            api('/api/me'),
-            api('/api/poker/stats').catch(() => null),
-        ]);
+        const me = await api('/api/me');
 
         const s = me.stats;
         document.getElementById('stats-wins').textContent = s.total_wins;
@@ -123,32 +117,6 @@ async function loadStats() {
                         </div>
                     `;
                 }).join('');
-        }
-
-        const pp = document.getElementById('stats-poker-panel');
-        if (!poker || !poker.hands_played) {
-            pp.innerHTML = '<div class="center muted">Ещё не играл в покер</div>';
-        } else {
-            const cell = (label, value) => `
-                <div>
-                    <div class="muted" style="font-size:12px;text-transform:uppercase;letter-spacing:.5px">${label}</div>
-                    <div style="font-size:20px;font-weight:700;margin-top:2px">${value}</div>
-                </div>
-            `;
-            pp.innerHTML = `
-                <div class="center mb-16" style="font-size:14px">
-                    🃏 Раздач: <b>${poker.hands_played}</b>
-                </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-                    ${cell('VPIP', poker.vpip + '%')}
-                    ${cell('PFR', poker.pfr + '%')}
-                    ${cell('3-bet', poker.three_bet + '%')}
-                    ${cell('AF', poker.aggression_factor)}
-                </div>
-                <div class="center mt-16" style="font-size:15px">
-                    ${poker.style_emoji || '🎯'} <b>${poker.style || '—'}</b>
-                </div>
-            `;
         }
 
         loadAnalytics();
@@ -302,7 +270,7 @@ async function loadAnalytics() {
         } else if (worstEl) { worstEl.textContent = '—'; }
 
         if (fav && favEl) {
-            const icons = { guess: '🎯', ttt: '❌', hangman: '💀', poker: '♠️', durak: '🃏' };
+            const icons = { guess: '🎯', ttt: '❌', hangman: '💀' };
             favEl.textContent = icons[fav.game] || '🎮';
             favEl.style.fontSize = '22px';
         } else if (favEl) { favEl.textContent = '—'; }
