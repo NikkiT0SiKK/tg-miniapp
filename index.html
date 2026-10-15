@@ -33,7 +33,7 @@
         <span class="balance-icon">💰</span>
         <span id="balance">—</span>
       </div>
-      <div class="balance-hint">Используется для покера и турниров</div>
+      <div class="balance-hint">Используется для наград</div>
     </div>
 
     <div class="section-title">🎮 Игры</div>
@@ -58,18 +58,6 @@
         <span class="game-emoji">⚔️</span>
         <div class="game-name">Крестики PvP</div>
         <div class="game-desc">Игра с другом в вебе</div>
-      </div>
-      <div class="game-card" style="--grad: linear-gradient(135deg, #f59e0b, #ef4444)" data-go="poker">
-        <span class="game-badge net">BOT</span>
-        <span class="game-emoji">♠️</span>
-        <div class="game-name">Покер</div>
-        <div class="game-desc">Texas Hold'em 2-6 игроков</div>
-      </div>
-      <div class="game-card" style="--grad: linear-gradient(135deg, #ec4899, #db2777)" data-go="durak">
-        <span class="game-badge net">BOT</span>
-        <span class="game-emoji">🃏</span>
-        <div class="game-name">Дурак</div>
-        <div class="game-desc">Подкидной 2-4 игрока</div>
       </div>
     </div>
   </section>
@@ -109,7 +97,7 @@
   </section>
 
   <!-- ============================================================
-       TIC-TAC-TOE
+       TIC-TAC-TOE (SOLO)
        ============================================================ -->
   <section class="screen" id="s-ttt">
     <div class="page-header">
@@ -256,231 +244,6 @@
   </section>
 
   <!-- ============================================================
-       POKER
-       ============================================================ -->
-  <section class="screen" id="s-poker">
-    <div class="page-header">
-      <div class="back-btn" data-poker-back>←</div>
-      <div style="flex:1">
-        <h1 class="page-title">♠️ Покер</h1>
-        <p class="page-subtitle" id="poker-sub">Лобби</p>
-      </div>
-    </div>
-
-    <div id="poker-lobby">
-      <div class="multi-card">
-        <h3>🎰 Создать стол</h3>
-        <p>Настрой и пригласи друга одним тапом</p>
-        <div class="chips" id="poker-stack-chips">
-          <button class="chip active" data-stack="1000">💰 1 000</button>
-          <button class="chip" data-stack="5000">💰 5 000</button>
-          <button class="chip" data-stack="10000">💰 10 000</button>
-        </div>
-        <div class="chips" id="poker-players-chips">
-          <button class="chip" data-max="2">👥 2</button>
-          <button class="chip active" data-max="4">👥 4</button>
-          <button class="chip" data-max="6">👥 6</button>
-        </div>
-        <div class="chips">
-          <button class="chip active" data-public="private">🔒 Приватная</button>
-          <button class="chip" data-public="public">🌐 Публичная</button>
-        </div>
-        <button class="btn block mt-16" id="poker-create">
-          🚀 Создать и пригласить
-        </button>
-      </div>
-
-      <div class="quick-actions">
-        <button class="quick-btn" id="poker-quick-share">
-          <span class="quick-icon">📤</span>
-          <span>Пригласить друга</span>
-        </button>
-        <button class="quick-btn" id="poker-quick-code">
-          <span class="quick-icon">🔑</span>
-          <span>Войти по коду</span>
-        </button>
-      </div>
-
-      <div class="section-title" id="poker-public-title" style="display:none">
-        🌐 Открытые столы
-      </div>
-      <div id="poker-public-list" class="leaderboard"></div>
-
-      <div id="poker-join-block" class="game-panel hidden">
-        <div class="center muted mb-16">Введи код комнаты</div>
-        <div class="input-row">
-          <input type="text" id="poker-join-code" placeholder="Например AB12C"
-                 maxlength="6" style="text-transform:uppercase">
-          <button class="btn" id="poker-join-btn">→</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="poker-wait" class="hidden">
-      <div class="game-panel wait-hero">
-        <div class="center muted">Код комнаты</div>
-        <div class="wait-code" id="poker-wait-code">—</div>
-        <div class="center muted">Отправь другу ссылку</div>
-      </div>
-      <button class="btn block" id="poker-share">📤 Пригласить друга</button>
-      <div class="section-title">👥 Игроки</div>
-      <div class="game-panel">
-        <div class="wait-players-list" id="poker-wait-players"></div>
-      </div>
-      <button class="btn block mt-8" id="poker-start">🚀 Начать игру</button>
-      <button class="btn sec block mt-8" id="poker-leave">🚪 Выйти</button>
-    </div>
-
-    <div id="poker-game" class="hidden">
-      <div class="poker-table-wrap">
-        <div class="poker-pot">
-          <span class="muted">Банк</span>
-          <span class="pot-value" id="poker-pot">0</span>
-        </div>
-        <div class="poker-stage" id="poker-stage">Префлоп</div>
-        <div class="poker-board" id="poker-board"></div>
-        <div class="poker-players" id="poker-players"></div>
-      </div>
-
-      <div class="section-title">Твои карты</div>
-      <div class="poker-my-hand" id="poker-my-hand"></div>
-      <div class="poker-my-info" id="poker-my-info"></div>
-      <div id="poker-turn-info" style="display:none;margin-bottom:12px"></div>
-      <div class="poker-actions" id="poker-actions"></div>
-      <div class="poker-log" id="poker-log"></div>
-
-      <div class="reactions-panel" id="reactions-panel">
-        <button class="reactions-toggle" id="reactions-toggle">😊</button>
-        <div class="reactions-list hidden" id="reactions-list">
-          <button class="reaction-btn" data-emoji="😎">😎</button>
-          <button class="reaction-btn" data-emoji="🔥">🔥</button>
-          <button class="reaction-btn" data-emoji="😂">😂</button>
-          <button class="reaction-btn" data-emoji="😭">😭</button>
-          <button class="reaction-btn" data-emoji="💀">💀</button>
-          <button class="reaction-btn" data-emoji="🤔">🤔</button>
-          <button class="reaction-btn" data-emoji="👏">👏</button>
-          <button class="reaction-btn" data-emoji="😱">😱</button>
-          <button class="reaction-btn" data-emoji="❤️">❤️</button>
-          <button class="reaction-btn" data-emoji="💩">💩</button>
-          <button class="reaction-btn" data-emoji="🎉">🎉</button>
-          <button class="reaction-btn" data-emoji="🤝">🤝</button>
-        </div>
-      </div>
-
-      <button class="btn sec block mt-16" id="poker-leave-2">🚪 Покинуть стол</button>
-    </div>
-  </section>
-
-  <!-- ============================================================
-       DURAK
-       ============================================================ -->
-  <section class="screen" id="s-durak">
-    <div class="page-header">
-      <div class="back-btn" data-durak-back>←</div>
-      <div style="flex:1">
-        <h1 class="page-title">🃏 Дурак</h1>
-        <p class="page-subtitle" id="durak-sub">Лобби</p>
-      </div>
-    </div>
-
-    <div id="durak-lobby">
-      <div class="multi-card">
-        <h3>🃏 Создать стол</h3>
-        <p>Играй с друзьями в 1 тап</p>
-        <div class="chips" id="durak-players-chips">
-          <button class="chip" data-dmax="2">👥 2</button>
-          <button class="chip active" data-dmax="3">👥 3</button>
-          <button class="chip" data-dmax="4">👥 4</button>
-        </div>
-        <div class="chips">
-          <button class="chip active" data-dpublic="private">🔒 Приватная</button>
-          <button class="chip" data-dpublic="public">🌐 Публичная</button>
-        </div>
-        <button class="btn block mt-16" id="durak-create">🚀 Создать и пригласить</button>
-      </div>
-
-      <div class="quick-actions">
-        <button class="quick-btn" id="durak-quick-share">
-          <span class="quick-icon">📤</span>
-          <span>Пригласить друга</span>
-        </button>
-        <button class="quick-btn" id="durak-quick-code">
-          <span class="quick-icon">🔑</span>
-          <span>Войти по коду</span>
-        </button>
-      </div>
-
-      <div id="durak-join-block" class="game-panel hidden">
-        <div class="center muted mb-16">Введи код комнаты</div>
-        <div class="input-row">
-          <input type="text" id="durak-join-code" placeholder="Например AB12C"
-                 maxlength="6" style="text-transform:uppercase">
-          <button class="btn" id="durak-join-btn">→</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="durak-wait" class="hidden">
-      <div class="game-panel wait-hero">
-        <div class="center muted">Код комнаты</div>
-        <div class="wait-code" id="durak-wait-code">—</div>
-      </div>
-      <button class="btn block" id="durak-share">📤 Пригласить друга</button>
-      <div class="section-title">👥 Игроки</div>
-      <div class="game-panel">
-        <div class="wait-players-list" id="durak-wait-players"></div>
-      </div>
-      <button class="btn block mt-8" id="durak-start">🚀 Начать игру</button>
-      <button class="btn sec block mt-8" id="durak-leave">🚪 Выйти</button>
-    </div>
-
-    <div id="durak-game" class="hidden">
-      <div class="durak-topbar">
-        <div class="durak-trump">
-          <span class="muted">🎺 Козырь</span>
-          <span class="durak-trump-suit" id="durak-trump">—</span>
-        </div>
-        <div class="durak-deck">
-          <span class="muted">Колода</span>
-          <span id="durak-deck-count">—</span>
-        </div>
-      </div>
-
-      <div class="durak-opponents" id="durak-opponents"></div>
-
-      <div class="durak-table" id="durak-table">
-        <div class="durak-table-inner" id="durak-table-inner">
-          <div class="center muted">Ожидание…</div>
-        </div>
-      </div>
-
-      <div class="durak-my-hand" id="durak-my-hand"></div>
-      <div class="durak-hint" id="durak-hint"></div>
-      <div class="durak-actions" id="durak-actions"></div>
-
-      <div class="reactions-panel" id="reactions-panel-durak">
-        <button class="reactions-toggle" id="reactions-toggle-durak">😊</button>
-        <div class="reactions-list hidden" id="reactions-list-durak">
-          <button class="reaction-btn" data-emoji="😎">😎</button>
-          <button class="reaction-btn" data-emoji="🔥">🔥</button>
-          <button class="reaction-btn" data-emoji="😂">😂</button>
-          <button class="reaction-btn" data-emoji="😭">😭</button>
-          <button class="reaction-btn" data-emoji="💀">💀</button>
-          <button class="reaction-btn" data-emoji="🤔">🤔</button>
-          <button class="reaction-btn" data-emoji="👏">👏</button>
-          <button class="reaction-btn" data-emoji="😱">😱</button>
-          <button class="reaction-btn" data-emoji="❤️">❤️</button>
-          <button class="reaction-btn" data-emoji="💩">💩</button>
-          <button class="reaction-btn" data-emoji="🎉">🎉</button>
-          <button class="reaction-btn" data-emoji="🤝">🤝</button>
-        </div>
-      </div>
-
-      <button class="btn sec block mt-16" id="durak-leave-2">🚪 Покинуть стол</button>
-    </div>
-  </section>
-
-  <!-- ============================================================
        PROFILE
        ============================================================ -->
   <section class="screen" id="s-profile">
@@ -587,11 +350,6 @@
       </div>
     </div>
 
-    <div class="section-title">♠️ Покер</div>
-    <div class="game-panel" id="stats-poker-panel">
-      <div class="center muted">Загрузка…</div>
-    </div>
-
     <div class="section-title">📈 Динамика банкролла</div>
     <div class="game-panel">
       <canvas id="chart-bankroll" style="width:100%;height:180px;display:block"></canvas>
@@ -660,8 +418,6 @@
 
     <div class="tabs" id="top-tabs">
       <div class="tab active" data-top-tab="bankroll">💰 Банкролл</div>
-      <div class="tab" data-top-tab="poker">♠️ Покер</div>
-      <div class="tab" data-top-tab="durak">🃏 Дурак</div>
       <div class="tab" data-top-tab="guess">🎯 Угадай</div>
       <div class="tab" data-top-tab="ttt">❌ Крестики</div>
       <div class="tab" data-top-tab="hangman">💀 Виселица</div>
@@ -762,8 +518,6 @@
 <script src="js/games/hangman.js" defer></script>
 <script src="js/games/snake.js" defer></script>
 <script src="js/games/g2048.js" defer></script>
-<script src="js/net/poker.js" defer></script>
-<script src="js/net/durak.js" defer></script>
 <script src="js/net/mp-ttt.js" defer></script>
 <script src="js/profile.js" defer></script>
 <script src="js/tops.js" defer></script>
